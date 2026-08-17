@@ -1,0 +1,7 @@
+# Force LF endings for shell scripts regardless of platform checkout
+# settings. deploy/user-data.sh gets pasted verbatim into EC2's "User
+# data" field and run by cloud-init on Linux -- a CRLF shebang line
+# (`#!/bin/bash\r`) fails with "bad interpreter: No such file or
+# directory" on Linux. Windows checkouts (core.autocrlf=true) would
+# otherwise silently convert this to CRLF on disk.
+*.sh text eol=lf
