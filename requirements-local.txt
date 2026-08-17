@@ -1,0 +1,15 @@
+# requirements-local.txt — additional packages for LOCAL development only,
+# with LLM_PROVIDER=ollama (the default when ENV=local).
+#
+# Install with:
+#   pip install -r requirements.txt -r requirements-local.txt
+#
+# NOT used by Dockerfile / the AWS deployment -- those install only
+# requirements.txt, since ENV=production there forces LLM_PROVIDER=openai
+# (see domains/bfsi_documents/settings.py), which never imports any of this.
+
+# Pulls in the full CUDA-enabled PyTorch stack (2.6+ GB) -- fine on a dev
+# laptop, much too heavy for a free-tier cloud instance that never uses it.
+# Needed for: retriever_agent.py's local CrossEncoder reranker,
+# rag_evaluator.py's CustomRAGEvaluator (both ollama-only code paths).
+sentence-transformers

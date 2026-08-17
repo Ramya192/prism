@@ -25,6 +25,21 @@ curl -SL https://github.com/docker/compose/releases/latest/download/docker-compo
   -o /usr/local/lib/docker/cli-plugins/docker-compose
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
+# Buildx plugin -- `docker compose up --build` needs it (Compose v5
+# requires buildx >= 0.17). AL2023's base `docker` package DOES bundle a
+# buildx plugin already, but as of this writing it's v0.12.1 -- older than
+# Compose v5 requires -- so `docker compose up --build` fails outright with
+# "compose build requires buildx 0.17.0 or later". There's no
+# docker-buildx-plugin RPM in AL2023's repos to upgrade via dnf, so fetch a
+# current release binary instead and place it in a cli-plugins dir that
+# takes priority over wherever the bundled one lives (Docker's plugin
+# search order checks /usr/local/lib/docker/cli-plugins before the system
+# dirs the bundled version is likely in).
+BUILDX_VERSION=$(curl -s https://api.github.com/repos/docker/buildx/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+curl -SL "https://github.com/docker/buildx/releases/download/${BUILDX_VERSION}/buildx-${BUILDX_VERSION}.linux-amd64" \
+  -o /usr/local/lib/docker/cli-plugins/docker-buildx
+chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
+
 # 2GB swap file. t3.micro's 1GB RAM is genuinely tight for `docker compose
 # build` (resolving/installing langchain + chromadb + ragas + datasets in
 # one image) and can OOM partway through without this. Swap turns "OOM
