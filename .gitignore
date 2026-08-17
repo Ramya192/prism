@@ -1,0 +1,58 @@
+# Secret keys — NEVER commit these
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# ChromaDB local storage
+chroma_db/
+
+# Test cache
+.pytest_cache/
+
+# Streamlit cache
+.streamlit/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# bfsi_fraud — large/derived datasets, regenerate with prepare_data.py
+domains/bfsi_fraud/data/creditcard.csv
+domains/bfsi_fraud/data/train.csv
+domains/bfsi_fraud/data/test_holdout.csv
+
+# bfsi_documents — bulk-generated statements + raw Kaggle CSV; only the 5
+# accounts evaluation/ground_truth.json references stay committed (see
+# tools/generate_statement.py). Everything else is repo weight with no
+# eval or demo value and can be regenerated locally.
+domains/bfsi_documents/data/raw/
+domains/bfsi_documents/data/statements/*.pdf
+!domains/bfsi_documents/data/statements/AC00003_statement.pdf
+!domains/bfsi_documents/data/statements/AC00140_statement.pdf
+!domains/bfsi_documents/data/statements/AC00254_statement.pdf
+!domains/bfsi_documents/data/statements/AC00360_statement.pdf
+!domains/bfsi_documents/data/statements/AC00448_statement.pdf
+
+# Eval output (regenerate with eval_harness.py)
+domains/bfsi_fraud/EVAL_RESULTS.md
+domains/bfsi_fraud/eval_results.json

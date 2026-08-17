@@ -1,0 +1,62 @@
+# configs/bfsi_documents.yaml
+# Domain: BFSI — Document Intelligence
+# Ported from Project B (FinLens / document_intelligence_system) — RAG over
+# bank statement PDFs with anomaly detection and RAG evaluation.
+
+domain:
+  id: bfsi_documents
+  name: "BFSI — Document Intelligence"
+  description: >
+    RAG pipeline over bank statement PDFs. Ingests a statement, answers
+    natural-language questions about it, flags anomalies, and scores its
+    own answer quality (RAGAS in production, a custom cosine/LLM-judge
+    evaluator locally).
+  status: working
+  input_type: document   # bank statement PDF
+
+pipeline:
+  module: domains.bfsi_documents.pipeline
+  class: DocumentPipeline
+
+agents:
+  - id: loader
+    class: domains.bfsi_documents.agents.document_loader_agent.DocumentLoaderAgent
+  - id: retriever
+    class: domains.bfsi_documents.agents.retriever_agent.RetrieverAgent
+  - id: reasoning
+    class: domains.bfsi_documents.agents.reasoning_agent.ReasoningAgent
+  - id: validator
+    class: domains.bfsi_documents.agents.validator_agent.ValidatorAgent
+
+vector_db:
+  provider: "${VECTOR_DB:chroma}"
+  collection: "${COLLECTION_NAME:bank_statements}"
+  chroma_path: "${CHROMA_PATH:./chroma_db}"
+
+llm:
+  provider: "${LLM_PROVIDER:ollama}"
+  ollama_model: "${OLLAMA_MODEL:llama3.1:8b}"
+  openai_model: "${OPENAI_MODEL:gpt-4o-mini}"
+  embedding_model: "${EMBEDDING_MODEL:text-embedding-3-small}"
+
+data:
+  statements_dir: domains/bfsi_documents/data/statements
+
+eval:
+  harness: domains.bfsi_documents.evaluation.rag_evaluator
+  type: ragas   # context_precision / faithfulness / answer_relevancy
+
+# Used by DomainClassifierAgent to score an uploaded input against this
+# domain before a human confirms the guess.
+classification_hints:
+  keywords:
+    - statement
+    - account
+    - balance
+    - withdrawal
+    - deposit
+    - IBAN
+    - routing number
+    - opening balance
+    - closing balance
+    - bank

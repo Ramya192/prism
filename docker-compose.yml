@@ -1,0 +1,22 @@
+services:
+  # ── Prism (single Streamlit service) ──────────────────────────────────────
+  prism:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: prism
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    environment:
+      # bfsi_documents's default LLM_PROVIDER=ollama reaches Ollama on the
+      # host from inside the container via this DNS name, not localhost.
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    volumes:
+      - ./chroma_db:/app/chroma_db                          # ChromaDB persists across restarts
+      - ./domains/bfsi_documents/data:/app/domains/bfsi_documents/data   # statement PDFs
+      - ./domains/bfsi_fraud/data:/app/domains/bfsi_fraud/data           # transaction CSVs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # lets the container reach host Ollama
+    restart: unless-stopped
