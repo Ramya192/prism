@@ -1,0 +1,48 @@
+# Merged + deduped from fraud_detection/requirements.txt and
+# document_intelligence_system/requirements.txt. Prism is a single
+# Streamlit deployment (no separate FastAPI service — same "single
+# deployment" reasoning the old FinLens README already documented), so
+# fastapi/uvicorn/python-multipart/httpx were dropped; pyyaml is new
+# (ConfigLoader). Pins kept where either source repo already had them.
+
+# Core LLM / orchestration
+langchain==1.2.12
+langchain-core==1.2.20
+langchain-openai==1.1.11
+langchain-community
+langchain-text-splitters
+langchain-ollama
+langchain-chroma
+openai==2.29.0
+
+# UI
+streamlit==1.55.0
+
+# Config
+pyyaml
+
+# Data / ML — bfsi_fraud
+pandas==2.3.3
+scikit-learn>=1.6.0
+
+# Documents / RAG — bfsi_documents
+pdfplumber
+chromadb==1.1.1
+sentence-transformers
+qdrant-client
+cohere==5.13.0
+ragas==0.4.3
+datasets
+
+# Test-data generation (bfsi_documents demo statements)
+reportlab
+fpdf2
+
+# Shared
+pydantic
+pillow==12.1.1
+python-dotenv==1.1.1
+requests
+
+# Testing
+pytest==9.0.2

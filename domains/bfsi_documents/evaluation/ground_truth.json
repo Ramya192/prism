@@ -1,0 +1,157 @@
+{
+  "AC00003_statement": {
+    "bank": "JPMorgan Chase",
+    "account_holder": "John Doe",
+    "qa_pairs": [
+      {
+        "question": "What is the closing balance?",
+        "ground_truth": "The closing balance is $1,688.90.",
+        "context_keywords": ["closing balance", "1,688.90"]
+      },
+      {
+        "question": "What is the total debit amount?",
+        "ground_truth": "The total debit amount is $849.72.",
+        "context_keywords": ["total debits", "849.72"]
+      },
+      {
+        "question": "How many transactions are there?",
+        "ground_truth": "There are 5 transactions in this statement.",
+        "context_keywords": ["transaction details", "ATM Withdrawal", "Ulta Beauty"]
+      },
+      {
+        "question": "Are there any suspicious transactions?",
+        "ground_truth": "No suspicious transactions are flagged in this statement. All transactions are ATM withdrawals and one Ulta Beauty online purchase.",
+        "context_keywords": ["ATM Withdrawal", "Ulta Beauty"]
+      },
+      {
+        "question": "What is the statement period?",
+        "ground_truth": "The statement period is January 02, 2023 to October 02, 2023.",
+        "context_keywords": ["statement period", "January 02, 2023", "October 02, 2023"]
+      }
+    ]
+  },
+  "AC00140_statement": {
+    "bank": "Bank of America",
+    "account_holder": "Ryan Patel",
+    "qa_pairs": [
+      {
+        "question": "What is the closing balance?",
+        "ground_truth": "The closing balance is $12,272.78.",
+        "context_keywords": ["closing balance", "12,272.78"]
+      },
+      {
+        "question": "What is the total credit amount?",
+        "ground_truth": "The total credit amount is $211.70.",
+        "context_keywords": ["total credits", "211.70"]
+      },
+      {
+        "question": "How many transactions are there?",
+        "ground_truth": "There are 7 transactions in this statement.",
+        "context_keywords": ["transaction details", "Venmo", "Pizza Hut", "Zelle", "Trader Joe", "ATM", "Chase Mortgage", "Hyatt"]
+      },
+      {
+        "question": "Are there any suspicious transactions?",
+        "ground_truth": "No transactions are explicitly flagged as suspicious. However, the ATM withdrawal of $152.42 in San Jose on October 23rd could be noted.",
+        "context_keywords": ["ATM Withdrawal", "San Jose"]
+      },
+      {
+        "question": "What was the largest debit transaction?",
+        "ground_truth": "The largest debit transaction was $241.45 at Trader Joe's Online on July 24, 2023.",
+        "context_keywords": ["Trader Joe's", "241.45"]
+      }
+    ]
+  },
+  "AC00254_statement": {
+    "bank": "Wells Fargo",
+    "account_holder": "Dr. Robert Chen",
+    "qa_pairs": [
+      {
+        "question": "What is the closing balance?",
+        "ground_truth": "The closing balance is $9,274.64.",
+        "context_keywords": ["closing balance", "9,274.64"]
+      },
+      {
+        "question": "Are there any suspicious transactions?",
+        "ground_truth": "Yes, there is one suspicious transaction — an Unknown Merchant (M100) online transaction of $175.07 on November 23, 2023.",
+        "context_keywords": ["SUSPICIOUS", "Unknown Merchant", "M100", "175.07"]
+      },
+      {
+        "question": "What is the total debit amount?",
+        "ground_truth": "The total debit amount is $1,203.99.",
+        "context_keywords": ["total debits", "1,203.99"]
+      },
+      {
+        "question": "How many ATM withdrawals are there?",
+        "ground_truth": "There are 3 ATM withdrawals — $165.91 in Jacksonville on March 15th, $508.16 in Mesa on March 28th, and $39.24 in Dallas on November 14th.",
+        "context_keywords": ["ATM Withdrawal", "Jacksonville", "Mesa", "Dallas"]
+      },
+      {
+        "question": "What is the total credit amount?",
+        "ground_truth": "The total credit amount is $0.00. There are no credit transactions in this statement.",
+        "context_keywords": ["total credits", "0.00"]
+      }
+    ]
+  },
+  "AC00360_statement": {
+    "bank": "Citibank",
+    "account_holder": "Alex Johnson",
+    "qa_pairs": [
+      {
+        "question": "What is the closing balance?",
+        "ground_truth": "The closing balance is $4,732.57.",
+        "context_keywords": ["closing balance", "4,732.57"]
+      },
+      {
+        "question": "What is the total credit amount?",
+        "ground_truth": "The total credit amount is $767.14.",
+        "context_keywords": ["total credits", "767.14"]
+      },
+      {
+        "question": "Are there any suspicious transactions?",
+        "ground_truth": "No transactions are flagged as suspicious. However, the Starbucks Coffee transaction of $463.92 is unusually large compared to the rest.",
+        "context_keywords": ["Starbucks Coffee", "463.92"]
+      },
+      {
+        "question": "What was the largest debit transaction?",
+        "ground_truth": "The largest debit transaction was $463.92 at Starbucks Coffee Online on March 13, 2023.",
+        "context_keywords": ["Starbucks Coffee", "463.92"]
+      },
+      {
+        "question": "What is the statement period?",
+        "ground_truth": "The statement period is March 13, 2023 to August 29, 2023.",
+        "context_keywords": ["statement period", "March 13, 2023", "August 29, 2023"]
+      }
+    ]
+  },
+  "AC00448_statement": {
+    "bank": "Goldman Sachs",
+    "account_holder": "Jane Smith",
+    "qa_pairs": [
+      {
+        "question": "What is the closing balance?",
+        "ground_truth": "The closing balance is $3,641.06.",
+        "context_keywords": ["closing balance", "3,641.06"]
+      },
+      {
+        "question": "How many ATM withdrawals are there?",
+        "ground_truth": "There are 5 ATM withdrawals — $27.61 in Fort Worth, $222.96 in Fresno, $72.50 in Fort Worth, $183.32 in Raleigh, and $23.30 in Los Angeles.",
+        "context_keywords": ["ATM Withdrawal", "Fort Worth", "Fresno", "Raleigh", "Los Angeles"]
+      },
+      {
+        "question": "What is the total debit amount?",
+        "ground_truth": "The total debit amount is $529.69.",
+        "context_keywords": ["total debits", "529.69"]
+      },
+      {
+        "question": "Are there any suspicious transactions?",
+        "ground_truth": "No transactions are flagged as suspicious. The statement contains ATM withdrawals, an Adidas Store purchase, and a LinkedIn Premium subscription.",
+        "context_keywords": ["ATM Withdrawal", "Adidas Store", "LinkedIn Premium"]
+      },
+      {
+        "question": "What was the largest debit transaction?",
+        "ground_truth": "The largest debit transaction was $590.26 at Adidas Store Branch in Austin on June 19, 2023.",
+        "context_keywords": ["Adidas Store", "590.26", "Austin"]
+      }
+    ]
+  }
+}
