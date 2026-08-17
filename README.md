@@ -109,6 +109,18 @@ pip install -r requirements.txt
 cp .env.example .env   # fill in OPENAI_API_KEY at minimum
 ```
 
+If you're running `bfsi_documents` locally with `LLM_PROVIDER=ollama` (the
+default when `ENV=local`), also install `requirements-local.txt` — it adds
+`sentence-transformers` (the local CrossEncoder reranker + RAG evaluator),
+which pulls in the full CUDA-enabled PyTorch stack and is deliberately
+*not* part of the always-installed `requirements.txt` (see that file's
+comments — it's dead weight everywhere `LLM_PROVIDER=openai` is used,
+including the AWS deployment):
+
+```bash
+pip install -r requirements-local.txt
+```
+
 ### 2. Run the CLI smoke test
 
 ```bash

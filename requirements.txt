@@ -28,11 +28,18 @@ scikit-learn>=1.6.0
 # Documents / RAG — bfsi_documents
 pdfplumber
 chromadb==1.1.1
-sentence-transformers
 qdrant-client
 cohere==5.13.0
 ragas==0.4.3
 datasets
+# sentence-transformers is NOT here on purpose -- see requirements-local.txt.
+# It's only imported (lazily, inside `if Settings.LLM_PROVIDER == "ollama"`
+# branches) by retriever_agent.py's CrossEncoder reranker and
+# rag_evaluator.py's CustomRAGEvaluator. Any deployment running with
+# ENV=production (which forces LLM_PROVIDER=openai -- see settings.py)
+# never imports it, so it doesn't belong in the always-installed set: it
+# drags in the full CUDA-enabled PyTorch stack (2.6+ GB of nvidia-*
+# wheels) for code that will never execute in that environment.
 
 # Test-data generation (bfsi_documents demo statements)
 reportlab

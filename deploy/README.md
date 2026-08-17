@@ -236,6 +236,18 @@ not just serving a blank page.
 
 ## Troubleshooting
 
+- **`compose build requires buildx 0.17.0 or later`**: AL2023's base
+  `docker` package bundles an older buildx (v0.12.1 as of this writing).
+  `deploy/user-data.sh` now fetches a current buildx binary automatically
+  on first boot — if you hit this anyway (e.g. an instance launched before
+  this fix), run:
+  ```bash
+  BUILDX_VERSION=$(curl -s https://api.github.com/repos/docker/buildx/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+  sudo curl -SL "https://github.com/docker/buildx/releases/download/${BUILDX_VERSION}/buildx-${BUILDX_VERSION}.linux-amd64" \
+    -o /usr/local/lib/docker/cli-plugins/docker-buildx
+  sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
+  docker buildx version   # confirm it now shows >= 0.17.0
+  ```
 - **Container keeps restarting / looks OOM-killed**: `docker stats` to
   watch memory live. If it's still failing with the swap file in place,
   the honest fallback is a `t3.small` (2GB RAM, ~$15/mo — no longer
