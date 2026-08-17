@@ -14,6 +14,19 @@ plumbing.
 
 ---
 
+## Live Demo
+
+**[https://prism-ramya-aws.duckdns.org](https://prism-ramya-aws.duckdns.org)**
+
+Deployed on AWS EC2 (Amazon Linux 2023, `t3.micro`, free tier) — a single
+Dockerized Streamlit service behind [Caddy](https://caddyserver.com) as a
+reverse proxy, with an automatically issued and renewed Let's Encrypt TLS
+certificate. No ALB, no ECS, no managed load balancer — a deliberately
+minimal, cost-free single-instance deployment (see `deploy/README.md` for
+the full provisioning runbook).
+
+---
+
 ## Architecture
 
 ```
