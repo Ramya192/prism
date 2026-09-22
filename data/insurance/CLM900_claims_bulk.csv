@@ -1,0 +1,6 @@
+Claim_Amount,Approved_Amount,Days_Between_Service_and_Claim,Provider_Specialty,Visit_Type,Insurance_Type,Number_of_Procedures,Number_of_Previous_Claims_Patient,Number_of_Previous_Claims_Provider,Claim_Submitted_Late
+1200,1100,12,Cardiology,Outpatient,Medicare,1,2,340,0
+8900,8900,1,Neurology,Inpatient,Private,4,0,210,0
+340,300,21,Dermatology,Outpatient,Medicaid,1,5,150,0
+5200,5200,2,Orthopedics,Emergency,Private,3,1,400,1
+610,610,9,General Practice,Outpatient,Medicare,1,3,520,0

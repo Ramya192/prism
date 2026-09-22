@@ -21,14 +21,22 @@ streamlit==1.55.0
 # Config
 pyyaml
 
-# Data / ML — bfsi_fraud
+# Data / ML — bfsi_fraud, payroll, healthcare, hr_compliance
 pandas==2.3.3
 scikit-learn>=1.6.0
+# healthcare Tier1's ClaimFraudScorer (LightGBM) and hr_compliance Tier1's
+# PostingFraudScorer (XGBoost) -- swapped from RandomForest after a
+# measured benchmark across all 7 scorer/tier combos showed a real F1
+# gain on these two specifically (healthcare 0.869->0.932, hr_compliance
+# 0.666->0.716); the other 5 scorers stayed on RandomForest since neither
+# alternative showed a clear win there.
+lightgbm
+xgboost
 
-# Documents / RAG — bfsi_documents
+# Documents / RAG — any-format ingestion (PDF/CSV/DOCX), all domains
 pdfplumber
+python-docx
 chromadb==1.1.1
-qdrant-client
 cohere==5.13.0
 ragas==0.4.3
 datasets

@@ -1,0 +1,7 @@
+transaction_amount_usd,sender_wallet_age_days,is_cross_chain,blockchain,platform,failed_txn_ratio_sender
+4684.65,234,False,Ethereum,Uniswap V3,0.279
+3599.38,54,True,Ethereum -> Polygon,Coinbase,0.219
+2663.31,385,True,Ethereum,Direct Transfer,0.212
+2920.81,54,True,Ethereum,Direct Transfer,0.073
+987.49,207,False,Arbitrum,Kraken,0.155
+4605.63,619,True,Ethereum -> Polygon,Uniswap V3,0.133

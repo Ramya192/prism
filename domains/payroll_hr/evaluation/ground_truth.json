@@ -1,0 +1,67 @@
+{
+  "EMP001_payslip": {
+    "employee": "Alicia Ferreira",
+    "qa_pairs": [
+      {
+        "question": "What was the gross pay?",
+        "ground_truth": "The gross pay was $2,924.00.",
+        "context_keywords": ["Gross Pay", "2924", "2,924"]
+      },
+      {
+        "question": "What was the net pay?",
+        "ground_truth": "The net pay was $1,907.03.",
+        "context_keywords": ["Net Pay", "1907.03", "1,907.03"]
+      },
+      {
+        "question": "How many overtime hours were worked?",
+        "ground_truth": "4.0 overtime hours were worked, at 1.5x the regular rate.",
+        "context_keywords": ["Overtime", "4.0"]
+      },
+      {
+        "question": "Do the deductions reconcile the gross pay to the net pay?",
+        "ground_truth": "Yes -- gross pay minus total deductions ($1,016.97) equals the stated net pay of $1,907.03, with no inconsistency.",
+        "context_keywords": ["Deduction", "1016.97", "1,016.97"]
+      }
+    ]
+  },
+  "EMP002_payslip": {
+    "employee": "Marcus Whitfield",
+    "qa_pairs": [
+      {
+        "question": "What was the gross pay?",
+        "ground_truth": "The gross pay was $3,320.00.",
+        "context_keywords": ["Gross Pay", "3320", "3,320"]
+      },
+      {
+        "question": "What was the net pay?",
+        "ground_truth": "The net pay was $2,185.62.",
+        "context_keywords": ["Net Pay", "2185.62", "2,185.62"]
+      },
+      {
+        "question": "How many overtime hours were worked?",
+        "ground_truth": "No overtime hours were worked -- this payslip reflects 80 regular hours only.",
+        "context_keywords": ["Overtime", "0"]
+      }
+    ]
+  },
+  "EMP003_payslip": {
+    "employee": "Priya Subramanian",
+    "qa_pairs": [
+      {
+        "question": "What was the gross pay?",
+        "ground_truth": "The gross pay was $3,382.00.",
+        "context_keywords": ["Gross Pay", "3382", "3,382"]
+      },
+      {
+        "question": "What was the stated net pay?",
+        "ground_truth": "The stated net pay was $2,379.24.",
+        "context_keywords": ["Net Pay", "2379.24", "2,379.24"]
+      },
+      {
+        "question": "Do the deductions reconcile the gross pay to the net pay?",
+        "ground_truth": "No -- the health deduction is calculated and listed but silently left out of the stated net pay. Gross pay minus the full deductions total ($1,152.76) should give a net pay of $2,229.24, not the stated $2,379.24.",
+        "context_keywords": ["Deduction", "reconciliation", "2229.24", "2,229.24"]
+      }
+    ]
+  }
+}

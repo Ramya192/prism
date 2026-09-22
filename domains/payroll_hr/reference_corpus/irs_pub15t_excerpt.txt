@@ -1,0 +1,142 @@
+SOURCE: IRS Publication 15-T, "Federal Income Tax Withholding Methods"
+(2026 edition; Catalog Number 32112B; Dec 3, 2025).
+Publisher: Internal Revenue Service (IRS), Department of the Treasury.
+URL: https://www.irs.gov/pub/irs-pdf/p15t.pdf
+Retrieved and excerpted for Prism's Payroll & HR domain reference corpus —
+curated to the sections and tables most relevant to payslip/withholding
+validity review, not the full 71-page publication. Section and worksheet
+numbers below match the original publication exactly; quoted text is
+reproduced verbatim from the source PDF unless marked as a paraphrase.
+Dollar figures below are the actual 2026 published figures — not estimates.
+
+== Introduction — Purpose and Scope ==
+"This publication supplements Pub. 15, Employer's Tax Guide. It describes
+how to figure withholding using the Wage Bracket Method or Percentage
+Method." Two methods exist for computing federal income tax withholding
+from wages: the Percentage Method (Worksheet 1A, works for any wage
+amount and any Form W-4 year) and the Wage Bracket Method (Worksheet 2,
+a lookup-table approach that "cover[s] a limited amount of annual wages
+(generally, less than $100,000)" — above that, the employer must use the
+Percentage Method instead). A payslip whose stated withholding cannot be
+reconciled to either method, for the employee's stated pay period and
+filing status, is a documentation gap worth flagging even before asking
+whether the withholding amount itself looks numerically right.
+
+== What's New for 2026 ==
+The 2026 withholding tables were updated for P.L. 119-21 ("One Big
+Beautiful Bill Act"), including "the permanent extension of individual
+tax rates, the permanent extension of the increased standard deduction,
+and the permanent termination of personal exemptions" (originally enacted
+by the 2017 Tax Cuts and Jobs Act). The 2026 Form W-4 added a new
+checkbox below Step 4(c) for claiming exemption from withholding — an
+employee marked "Exempt" should show $0 federal withholding regardless of
+gross pay, which is a legitimate zero, not a missing-field error.
+
+== Form W-4 — How Its Steps Drive Withholding ==
+Form W-4 has 5 steps. Every employer-held Form W-4 should show a
+completed Step 1 (name, address, SSN, filing status) and a signed Step 5.
+Steps 2, 3, and 4 are optional and each has a specific, distinct effect
+on the withholding calculation:
+- "Step 2. If the employee checks the box in Step 2, the employer figures
+  withholding from the 'Form W-4, Step 2, Checkbox' column ... This
+  results in higher withholding for the employee."
+- "Step 3. Employers use the amount on this line as an annual reduction
+  in the amount of withholding" (dependent/credit amount).
+- "Steps 4(a) and 4(b). Employers increase the annual amount of wages
+  subject to income tax withholding by the annual amount shown in Step
+  4(a) and reduce [it] by the annual amount shown in Step 4(b)" (other
+  income, and deductions, respectively).
+- "Step 4(c). Employers will increase withholding by the per pay period
+  tax amount in Step 4(c)" (a flat extra amount per paycheck).
+A new employee who submits no Form W-4 at all "will be treated as if
+they had checked the box for Single or Married filing separately in Step
+1(c) and made no entries in Step 2, Step 3, or Step 4" — i.e., maximum
+default withholding, not zero withholding.
+
+== Rounding ==
+"To figure the income tax to withhold, you may reduce the last digit of
+the wages to zero, or figure the wages to the nearest dollar. You may
+also round the tax for the pay period to the nearest dollar. If rounding
+is used, it must be used consistently. Withheld tax amounts should be
+rounded to the nearest whole dollar by dropping amounts under 50 cents
+and increasing amounts from 50 to 99 cents to the next dollar. For
+example, $2.30 becomes $2 and $2.50 becomes $3." A payslip whose
+withholding figures don't round to whole dollars consistently within the
+same document is a low-severity documentation inconsistency, not
+necessarily fraud on its own.
+
+== 2026 STANDARD Withholding Rate Schedules (Annual, Percentage Method) ==
+(Use for a 2019-or-earlier Form W-4, or a 2020-or-later Form W-4 with the
+Step 2 box NOT checked; also used for Form W-4P of any year.) Real 2026
+brackets, reproduced from the published table — "Adjusted Annual Wage
+Amount," tentative annual withholding at the bracket floor, and marginal
+rate above that floor:
+
+Married Filing Jointly:
+  $0–$19,300: $0.00 + 0% of the amount over $0
+  $19,300–$44,100: $0.00 + 10% of the amount over $19,300
+  $44,100–$120,100: $2,480.00 + 12% of the amount over $44,100
+  $120,100–$230,700: $11,600.00 + 22% of the amount over $120,100
+  $230,700–$422,850: $35,932.00 + 24% of the amount over $230,700
+  $422,850–$531,750: $82,048.00 + 32% of the amount over $422,850
+  $531,750–$788,000: $116,896.00 + 35% of the amount over $531,750
+  over $788,000: $206,583.50 + 37% of the amount over $788,000
+
+Single or Married Filing Separately:
+  $0–$7,500: $0.00 + 0%
+  $7,500–$19,900: $0.00 + 10% of the amount over $7,500
+  $19,900–$57,900: $1,240.00 + 12% of the amount over $19,900
+  $57,900–$113,200: $5,800.00 + 22% of the amount over $57,900
+  $113,200–$209,275: $17,966.00 + 24% of the amount over $113,200
+  $209,275–$263,725: $41,024.00 + 32% of the amount over $209,275
+  $263,725–$648,100: $58,448.00 + 35% of the amount over $263,725
+  over $648,100: $192,979.25 + 37% of the amount over $648,100
+
+Head of Household:
+  $0–$15,550: $0.00 + 0%
+  $15,550–$33,250: $0.00 + 10% of the amount over $15,550
+  $33,250–$83,000: $1,770.00 + 12% of the amount over $33,250
+  $83,000–$121,250: $7,740.00 + 22% of the amount over $83,000
+  $121,250–$217,300: $16,155.00 + 24% of the amount over $121,250
+  $217,300–$271,750: $39,207.00 + 32% of the amount over $217,300
+  $271,750–$656,150: $56,631.00 + 35% of the amount over $271,750
+  over $656,150: $191,171.00 + 37% of the amount over $656,150
+
+These are ANNUALIZED brackets — a per-paycheck withholding figure must
+first be annualized (multiplied by the number of pay periods per year:
+52 weekly, 26 biweekly, 24 semimonthly, 12 monthly) before comparing it
+against this table.
+
+== 2026 Wage Bracket Method — WEEKLY Payroll Period (representative rows) ==
+"Standard withholding" columns, "Adjusted Wage Amount" (line 1h of
+Worksheet 2) at least / but less than, tentative withholding amount —
+real published dollar figures, a representative sample spanning the low
+end of the table through a mid-range wage:
+  Single/MFS, no Step 2 checkbox:
+    $0–$315: $0   $625–$635: $1   $785–$795: $53   $1,205–$1,215: $103
+    $1,435–$1,445: $147   $1,915–$1,925: $253
+  Married Filing Jointly, no Step 2 checkbox:
+    $0–$625: $0   $785–$795: $17   $1,205–$1,215: $61   $1,435–$1,445: $89
+    $1,915–$1,925: $147
+  Head of Household, no Step 2 checkbox:
+    $0–$315: $0   $465–$475: $1   $785–$795: $33   $1,205–$1,215: $83
+    $1,915–$1,925: $184
+A weekly-paid employee whose Adjusted Wage Amount falls in the $785–$795
+bracket, filing Single with no Step 2 checkbox, has a Tentative
+Withholding Amount of exactly $53 before Step 3/4(c) adjustments — a
+withholding figure far outside this looked-up value for the employee's
+stated wage and filing status (absent a Step 3 credit or Step 4(c) extra
+withholding entry on file) is inconsistent with the published tables.
+
+== 2026 Wage Bracket Method — BIWEEKLY Payroll Period (representative rows) ==
+  Single/MFS, no Step 2 checkbox:
+    $0–$470: $0   $940–$955: $33   $1,485–$1,505: $96   $2,045–$2,065: $163
+  Married Filing Jointly, no Step 2 checkbox:
+    $0–$1,240: $0   $1,485–$1,505: $26   $2,045–$2,065: $82
+  Head of Household, no Step 2 checkbox:
+    $0–$470: $0   $940–$955: $2   $1,485–$1,505: $57   $2,045–$2,065: $122
+The Biweekly table's brackets are not simply double the Weekly table's —
+each pay-frequency table is independently published, so a payslip's
+implied annual wage should be checked against the STANDARD Withholding
+Rate Schedules (above) when comparing figures across different pay
+frequencies, not against a doubled/halved Weekly or Biweekly bracket.
