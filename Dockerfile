@@ -19,6 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY configs/ ./configs/
 COPY core/ ./core/
 COPY domains/ ./domains/
+COPY .streamlit/config.toml ./.streamlit/config.toml
 COPY streamlit_app.py .
 COPY main.py .
 

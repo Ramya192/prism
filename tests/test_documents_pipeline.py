@@ -2,10 +2,12 @@
 tests/test_documents_pipeline.py
 Adapted from document_intelligence_system/tests/test_api.py. The original
 suite drove a running FastAPI server over HTTP; Prism has no separate API
-service (single Streamlit deployment — see domains/bfsi_documents/pipeline.py),
-so these call DocumentPipeline directly in-process instead. Same underlying
-assertions on ingest/analyze behaviour; the SSE-streaming test class is
-dropped since there's no streaming endpoint to test.
+service (single Streamlit deployment), so these call BankingPipeline
+(domains/banking/pipeline.py, unifying fraud detection and document chat
+under one pipeline -- see core/unified_pipeline.py) directly in-process
+instead. Same underlying assertions on ingest/analyze behaviour as the
+original bfsi_documents suite; the SSE-streaming test class is dropped
+since there's no streaming endpoint to test.
 
 Requires OPENAI_API_KEY (embeddings always go through OpenAI) and, for the
 default LLM_PROVIDER=ollama, a running Ollama with llama3.1:8b pulled.
@@ -33,7 +35,7 @@ from core.orchestrator import AgentOrchestrator
 @pytest.fixture(scope="session")
 def pipeline():
     orchestrator = AgentOrchestrator()
-    return orchestrator.get_pipeline("bfsi_documents")
+    return orchestrator.get_pipeline("banking")
 
 
 @pytest.fixture(scope="session")
@@ -115,6 +117,31 @@ class TestIngest:
     def test_ingest_no_temp_filename_leak(self, ingest_response):
         """Verify the temp path is not returned as document name."""
         assert not ingest_response["document"].startswith("tmp")
+
+    def test_ingest_scores_every_extracted_transaction(self, ingest_response):
+        """ingest() now routes each extracted transaction through the
+        SAME rules->tiered ML->LLM engine the CSV fraud path uses --
+        core/unified_pipeline.py's UnifiedDomainPipeline, replacing the
+        old separate LLM-only anomaly_scan capability. The sample
+        statement has 5 real transaction lines; the exact extracted count
+        isn't asserted (this file's own TestAnalyze.test_analyze_transaction_fields
+        doesn't either) -- real LLM extraction can occasionally include or
+        drop a borderline line (e.g. a closing-balance row), same
+        tolerance the rest of this suite already gives it. What matters is
+        that every extracted record got a real, independent verdict."""
+        assert "fraud_verdicts" in ingest_response
+        verdicts = ingest_response["fraud_verdicts"]
+        assert len(verdicts) >= 4  # allow +/-1 extraction variance around the 5 real lines
+        for v in verdicts:
+            assert v["predicted"] in {"FRAUD", "LEGITIMATE"}
+        summary = ingest_response["fraud_summary"]
+        assert summary["total_scored"] == len(verdicts)
+        assert summary["flagged"] + summary["clean"] == len(verdicts)
+
+    def test_ingest_builds_seed_history(self, ingest_response):
+        assert len(ingest_response["seed_history"]) == 2
+        assert ingest_response["seed_history"][0]["speaker"] == "user"
+        assert ingest_response["seed_history"][1]["speaker"] == "assistant"
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -219,3 +246,24 @@ class TestEdgeCases:
         the answer quality may be worse without it scoping retrieval."""
         result = pipeline.run("What are the withdrawals?", source_document=None)
         assert result["status"] in {"valid", "invalid"}
+
+
+class TestReferenceCorpus:
+    def test_followup_query_draws_on_reference_corpus(self, pipeline, ingested_doc):
+        """BankingPipeline.REFERENCE_SOURCE is set (see pipeline.py) --
+        confirms retrieve() actually merges the ingested statement with
+        the Regulation E reference corpus
+        (domains/banking/reference_corpus/regulation_e_excerpt.txt, run
+        via domains/banking/documents/data/ingest_reference_corpus.py)
+        rather than answering from the statement alone. Grounded in a
+        real, quoted Regulation E 1005.6 figure that appears nowhere in
+        the bank statement itself: prompt notice within 2 business days
+        caps consumer liability at $50."""
+        result = pipeline.run(
+            "Under Regulation E, if a consumer notifies their bank within "
+            "2 business days of losing their debit card, what is the most "
+            "they can be held liable for?",
+            source_document=ingested_doc,
+        )
+        assert result["status"] == "valid"
+        assert "50" in result["data"]["answer"]

@@ -1,0 +1,105 @@
+# configs/insurance.yaml
+# Domain: Insurance (renamed from healthcare) -- claim-level fraud
+# detection AND claim/EOB document chat, unified under ONE pipeline
+# (InsurancePipeline, built on core/unified_pipeline.py's
+# UnifiedDomainPipeline) -- the first domain built this way from the
+# start, rather than inheriting Banking's/Payroll's split-by-format
+# history. Any upload (CSV, PDF, or DOCX) always gets both a fraud
+# verdict and a chat-ready ingestion -- see
+# docs/UNIFIED_INGESTION_VISION.md.
+#
+# Fraud detection: rules -> tiered ML (Tier 1 + Tier 2) -> LLM over
+# insurance claim records -- see domains/insurance/agents/
+# healthcare_detector_agent.py and data/prepare_data.py for the
+# datasets, measured accuracy, and design history (rejected a
+# provider-level Medicare dataset first).
+#
+# Document chat: a PDF/DOCX claim or EOB gets its fields extracted via
+# ReasoningAgent and mapped into the SAME Tier1/2/3 schema the CSV path
+# uses (domains/insurance/pipeline.py's _map_extraction_to_records) --
+# returns no forced match if the document doesn't state enough fields,
+# same honest degradation Banking's PDF path already relies on. Chat
+# retrieval draws on the uploaded document AND the domain's reference
+# corpus (a curated excerpt of the CMS Medicare Claims Processing
+# Manual, Chapter 26 -- see domains/insurance/reference_corpus/).
+#
+# Scope today is health-insurance claims only; no auto, life, or
+# property/casualty claim types are covered despite the broader domain
+# name -- "Insurance" is used as a forward-looking umbrella, not a claim
+# of coverage that exists yet.
+
+domain:
+  id: insurance
+  name: "Insurance"
+  description: >
+    Claim-level fraud detection (rules -> tiered ML -> LLM) and claim/EOB
+    document chat, unified in one pipeline. Any CSV/PDF/DOCX upload gets
+    both a fraud verdict and a chat-ready ingestion, grounded in the
+    document itself plus a curated CMS Medicare Claims Processing Manual
+    excerpt.
+  status: working
+  input_type: document   # claim record (CSV row) or claim/EOB document (PDF/DOCX)
+
+pipeline:
+  module: domains.insurance.pipeline
+  class: InsurancePipeline
+
+agents:
+  - id: detector
+    class: domains.insurance.agents.healthcare_detector_agent.HealthcareDetectorAgent
+  - id: loader
+    class: domains.insurance.agents.document_loader_agent.DocumentLoaderAgent
+  - id: retriever
+    class: domains.insurance.agents.retriever_agent.RetrieverAgent
+  - id: reasoning
+    class: domains.insurance.agents.reasoning_agent.ReasoningAgent
+  - id: validator
+    class: domains.insurance.agents.validator_agent.ValidatorAgent
+
+vector_db:
+  provider: chroma
+  collection: "${INSURANCE_COLLECTION_NAME:insurance_claims}"
+  chroma_path: "${CHROMA_PATH:./vector_store}"
+
+llm:
+  provider: "${LLM_PROVIDER:ollama}"
+  ollama_model: "${OLLAMA_MODEL:llama3.1:8b}"
+  openai_model: "${OPENAI_MODEL:gpt-4o-mini}"
+  embedding_model: "${EMBEDDING_MODEL:text-embedding-3-small}"
+
+data:
+  demo_csv: domains/insurance/data/train.csv
+  statements_dir: domains/insurance/data/statements
+  reference_corpus: domains/insurance/reference_corpus/cms_claims_processing_excerpt.txt
+
+# One upload, two capabilities -- document_qa is the open chat the user
+# can keep using after ingest; claim_review runs once, automatically,
+# inside Pipeline.ingest() itself.
+capabilities:
+  - id: document_qa
+    label: "Ask a question"
+    trigger: on_demand
+  - id: claim_review
+    label: "Compliance check"
+    trigger: auto
+    query: >
+      List the claim amount, approved amount, service date, claim date,
+      patient age and gender, insurance type, provider specialty, and
+      visit type, and flag anything that looks inconsistent — an
+      approved amount larger than the billed amount, or a claim date
+      before the service date.
+
+classification_hints:
+  keywords:
+    - patient
+    - diagnosis
+    - medical record
+    - PHI
+    - HIPAA
+    - prescription
+    - clinical
+    - insurance claim
+    - reimbursement
+    - claim amount
+    - explanation of benefits
+    - EOB

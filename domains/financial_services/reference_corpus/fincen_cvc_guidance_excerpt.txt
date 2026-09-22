@@ -1,0 +1,100 @@
+SOURCE: FinCEN Guidance FIN-2019-G001, "Application of FinCEN's Regulations
+to Certain Business Models Involving Convertible Virtual Currencies."
+Publisher: Financial Crimes Enforcement Network (FinCEN), U.S. Department
+of the Treasury. Issued: May 9, 2019.
+URL: https://www.fincen.gov/sites/default/files/2019-05/FinCEN%20Guidance%20CVC%20FINAL%20508.pdf
+Retrieved and excerpted for Prism's Financial Services domain reference
+corpus — curated to the sections most relevant to wallet/exchange
+statement review, not the full 30-page guidance. Section numbers below
+match the original guidance exactly; quoted text is reproduced verbatim
+from the source PDF unless marked as a paraphrase. This is interpretive
+guidance, not a new regulation — it consolidates FinCEN's existing Bank
+Secrecy Act (BSA) rules as applied to virtual-currency business models.
+
+== 1.3 — Convertible Virtual Currency (CVC), Defined ==
+"'Virtual currency' refers to a medium of exchange that can operate like
+currency but does not have all the attributes of 'real' currency ...
+including legal tender status. CVC is a type of virtual currency that
+either has an equivalent value as currency, or acts as a substitute for
+currency." The label used for a given CVC ("digital currency,"
+"cryptocurrency," "cryptoasset," "digital asset," etc.) is explicitly
+"not dispositive of its regulatory treatment" — FinCEN looks at the
+underlying activity and facts/circumstances, not the marketing label,
+and applies regardless of whether the ledger is centralized or
+distributed or what transmission technology is used.
+
+== 1.2 / 2 — Money Transmitter and Money Transmission, Defined ==
+A "money transmitter" is a "person that provides money transmission
+services," or "any other person engaged in the transfer of funds."
+"Money transmission services" means "the acceptance of currency, funds,
+or other value that substitutes for currency from one person and the
+transmission of currency, funds, or other value that substitutes for
+currency to another location or person by any means." A person qualifies
+as a money transmitter regardless of: order of operations (accepting
+value first vs. transmitting first), whether operating transactionally
+or on an ongoing account basis, and regardless of "the type of asset the
+person uses as value that substitutes for currency, or whether such
+asset is physical or virtual."
+
+Six activities are explicitly EXCLUDED from "money transmitter" status
+(31 CFR § 1010.100(ff)(5)(ii)(A)-(F)): (a) providing only the
+delivery/communication/network access used by an actual money
+transmitter; (b) acting as a payment processor for a good/service sale
+through a clearance/settlement system by agreement with the seller;
+(c) operating a clearance/settlement system solely between BSA-regulated
+institutions; (d) physically transporting currency/value with no more
+than custodial interest (e.g., an armored car); (e) providing prepaid
+access; or (f) accepting/transmitting funds only integral to a sale of
+goods or services other than money transmission itself. "FinCEN
+interprets these exemptions strictly" — a business does not get an
+exemption for activity that only partially conforms to one.
+
+== 2.1 — AML Program Requirements for Money Services Businesses (MSBs) ==
+A non-exempt money transmitter must register with FinCEN as an MSB
+"within 180 days of starting to engage in money transmission," and must
+maintain a written AML program that, at minimum: "(a) incorporate[s]
+policies, procedures and internal controls reasonably designed to assure
+ongoing compliance (including verifying customer identification, filing
+reports, creating and retaining records, and responding to law
+enforcement requests); (b) designate[s] an individual responsible to
+assure day-to-day compliance; (c) provide[s] training for appropriate
+personnel, including training in the detection of suspicious
+transactions; and, (d) provide[s] for independent review to monitor and
+maintain an adequate program." The program must be risk-based, scaled to
+"the composition of customer base, the geographies served, and the
+financial products and services offered."
+
+== 4.1 — Peer-to-Peer (P2P) Exchangers ==
+"P2P exchangers are (typically) natural persons engaged in the business
+of buying and selling CVCs," often advertising through classifieds,
+dedicated platforms, forums, or word of mouth, and "facilitate transfers
+from one type of CVC to a different type of CVC, as well as exchanges
+between CVC and other types of value." A natural person acting as a P2P
+exchanger "must comply with BSA regulations as a money transmitter
+acting as principal ... regardless of the regularity or formality of
+such transactions" — UNLESS the activity is infrequent and not for
+profit or gain, in which case it is exempt. A counterparty on a wallet
+statement that repeatedly appears in a pattern consistent with P2P-
+exchanger activity (frequent small counterparty-initiated CVC-for-CVC or
+CVC-for-fiat conversions) is a business-model fact worth surfacing
+during document review, distinct from any single transaction's own
+fraud score.
+
+== 4.2 / 4.2.1 — CVC Wallets: Hosted vs. Unhosted ==
+"CVC wallets are interfaces for storing and transferring CVCs" —
+technology varies (mobile, software, hardware), and wallets may store
+value locally or hold a private key controlling value stored elsewhere.
+The regulatory distinction that matters is control, not technology:
+"Wallets where user funds are controlled by third parties are called
+'hosted wallets' whereas wallets where users control the funds are
+called 'unhosted wallets.'" Whether a wallet-hosting intermediary itself
+has BSA obligations depends on four facts: "(a) who owns the value; (b)
+where the value is stored; (c) whether the owner interacts directly with
+the payment system where the CVC runs; and, (d) whether the person
+acting as intermediary has total independent control over the value."
+Hosted wallet providers are, per FinCEN, "account-based money
+transmitters that receive, store, and transmit CVCs" on the user's
+behalf — a materially different compliance posture than an unhosted,
+self-custodied wallet, which is relevant context when a wallet
+statement's counterparty is itself a wallet-hosting platform rather than
+another individual user.

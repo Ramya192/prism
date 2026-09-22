@@ -5,9 +5,9 @@ AWS Free Tier only (no ALB, no ECS, no NAT gateway — those all cost
 money). TLS + a proper domain is phase 2, layered on top once this is
 confirmed working — see the note at the very end.
 
-**You run every step below** — nothing here needs AWS credentials in the
-Claude Code sandbox. Ping me with the exact error text any time something
-doesn't match what's described and I'll help debug.
+**You run every step below** — nothing here needs AWS credentials stored
+locally. If a step doesn't match what's described, capture the exact
+error text before debugging further.
 
 ---
 
@@ -203,7 +203,7 @@ reranker degrades gracefully without it). Save and exit nano: `Ctrl+O`,
 `Enter`, `Ctrl+X`.
 
 This `.env` is **not** the same as your local dev `.env` — it sets
-`ENV=production`, which routes `bfsi_documents` to OpenAI instead of a
+`ENV=production`, which routes banking document chat to OpenAI instead of a
 local Ollama that doesn't exist on this box. See the comments in
 `deploy/.env.production.example` for why.
 

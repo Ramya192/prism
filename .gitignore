@@ -1,5 +1,14 @@
-# Secret keys — NEVER commit these
+# Secret keys — NEVER commit these (only *.example templates are committed)
 .env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.ppk
+*.key
+
+# Local editor/tooling config — not project code
+.claude/
 
 # Python
 __pycache__/
@@ -17,13 +26,21 @@ venv/
 env/
 
 # ChromaDB local storage
-chroma_db/
+vector_store/
 
 # Test cache
 .pytest_cache/
+.coverage
+htmlcov/
 
-# Streamlit cache
-.streamlit/
+# Personal scratch / working notes -- not part of the project
+scratch_*
+*.scratch.*
+NOTES.md
+TODO.md
+
+# Streamlit secrets only -- .streamlit/config.toml (the pinned light theme) IS committed
+.streamlit/secrets.toml
 
 # IDE
 .vscode/
@@ -36,23 +53,64 @@ Thumbs.db
 # Logs
 *.log
 
-# bfsi_fraud — large/derived datasets, regenerate with prepare_data.py
-domains/bfsi_fraud/data/creditcard.csv
-domains/bfsi_fraud/data/train.csv
-domains/bfsi_fraud/data/test_holdout.csv
+# banking/fraud — large/derived datasets, regenerate with prepare_data.py
+domains/banking/fraud/data/creditcard.csv
 
-# bfsi_documents — bulk-generated statements + raw Kaggle CSV; only the 5
+# payroll_hr — third-party sample handbook (SHRM members-only redistribution
+# terms); re-download per domains/payroll_hr/data/handbooks/README.md,
+# never commit the .docx itself.
+domains/payroll_hr/data/handbooks/*.docx
+domains/banking/fraud/data/creditcardfraud.zip
+domains/banking/fraud/data/train.csv
+domains/banking/fraud/data/test_holdout.csv
+# banking/fraud Tier 2 — same pattern, regenerate with prepare_tier2_data.py
+domains/banking/fraud/data/tier2_raw/
+domains/banking/fraud/data/tier2_train.csv
+domains/banking/fraud/data/tier2_test_holdout.csv
+# payroll_hr/payroll ML anomaly tier — same pattern, regenerate with prepare_tier_ml_data.py
+domains/payroll_hr/payroll/data/tier_ml_raw/
+domains/payroll_hr/payroll/data/tier_ml_train.csv
+domains/payroll_hr/payroll/data/tier_ml_test_holdout.csv
+# payroll_hr/payroll Tier 2 — same pattern, regenerate with prepare_tier2_data.py
+domains/payroll_hr/payroll/data/tier2_raw/
+domains/payroll_hr/payroll/data/tier2_train.csv
+domains/payroll_hr/payroll/data/tier2_test_holdout.csv
+# insurance — same pattern, regenerate with prepare_data.py
+domains/insurance/data/raw/
+domains/insurance/data/train.csv
+domains/insurance/data/test_holdout.csv
+# insurance Tier 2 — same pattern, regenerate with prepare_tier2_data.py
+domains/insurance/data/tier2_raw/
+domains/insurance/data/tier2_train.csv
+domains/insurance/data/tier2_test_holdout.csv
+# payroll_hr/hr — same pattern, regenerate with prepare_data.py
+domains/payroll_hr/hr/data/raw/
+domains/payroll_hr/hr/data/train.csv
+domains/payroll_hr/hr/data/test_holdout.csv
+# financial_services — same pattern, regenerate with prepare_data.py
+domains/financial_services/data/tier1_raw/
+domains/financial_services/data/backup_wallet_raw/
+domains/financial_services/data/train.csv
+domains/financial_services/data/test_holdout.csv
+# financial_services Tier 2 — same pattern, regenerate with prepare_tier2_data.py
+domains/financial_services/data/tier2_raw/
+domains/financial_services/data/tier2_train.csv
+domains/financial_services/data/tier2_test_holdout.csv
+
+# banking/documents — bulk-generated statements + raw Kaggle CSV; only the 5
 # accounts evaluation/ground_truth.json references stay committed (see
 # tools/generate_statement.py). Everything else is repo weight with no
 # eval or demo value and can be regenerated locally.
-domains/bfsi_documents/data/raw/
-domains/bfsi_documents/data/statements/*.pdf
-!domains/bfsi_documents/data/statements/AC00003_statement.pdf
-!domains/bfsi_documents/data/statements/AC00140_statement.pdf
-!domains/bfsi_documents/data/statements/AC00254_statement.pdf
-!domains/bfsi_documents/data/statements/AC00360_statement.pdf
-!domains/bfsi_documents/data/statements/AC00448_statement.pdf
+domains/banking/documents/data/raw/
+domains/banking/documents/data/statements/*.pdf
+!domains/banking/documents/data/statements/AC00003_statement.pdf
+!domains/banking/documents/data/statements/AC00140_statement.pdf
+!domains/banking/documents/data/statements/AC00254_statement.pdf
+!domains/banking/documents/data/statements/AC00360_statement.pdf
+!domains/banking/documents/data/statements/AC00448_statement.pdf
 
-# Eval output (regenerate with eval_harness.py)
-domains/bfsi_fraud/EVAL_RESULTS.md
-domains/bfsi_fraud/eval_results.json
+# Eval output (regenerate with eval_harness.py), every domain
+domains/*/EVAL_RESULTS.md
+domains/*/eval_results.json
+domains/*/*/EVAL_RESULTS.md
+domains/*/*/eval_results.json

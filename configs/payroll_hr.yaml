@@ -1,0 +1,109 @@
+# configs/payroll_hr.yaml
+# Domain: Payroll & HR -- fraud detection AND payslip document chat,
+# unified under ONE pipeline (PayrollHrPipeline, built on
+# core/unified_pipeline.py's UnifiedDomainPipeline) under this single
+# config id.
+#
+# Fraud detection: content-routed between payroll-register fraud
+# (PayrollDetectorAgent, tiered rules -> ML -> LLM) and job-posting fraud
+# (HrDetectorAgent, rules -> ML -> LLM) -- see
+# domains/payroll_hr/pipeline.py's PayrollHrFraudPipeline (untouched,
+# reused as a component) for why these are one GICS sub-industry
+# (Human Resource & Employment Services), not two domains.
+#
+# Document chat: a payslip PDF/DOCX gets its line items extracted via
+# ReasoningAgent and mapped into the SAME Tier1 (BasePay/OvertimePay/
+# OtherPay/Stated_TotalPay) or Tier2 (GROSS/Deduction/Net_Pay) schema the
+# CSV path uses -- see PayrollHrPipeline._map_extraction_to_records().
+# HR has no document/RAG capability at all (job postings are pasted text
+# or CSV rows in practice, not uploaded PDFs), so a PDF/DOCX upload here
+# is always treated as a payslip.
+#
+# No reference corpus yet -- IRS Publication 15-T (2026 withholding
+# tables, FICA rates) was identified and confirmed real/fetchable this
+# session (see docs/UNIFIED_INGESTION_VISION.md) but never ingested.
+
+domain:
+  id: payroll_hr
+  name: "Payroll & HR"
+  description: >
+    Content-routed fraud detection across two record shapes (payroll-
+    register rows and job postings), plus payslip document chat, unified
+    in one pipeline. Any CSV/PDF/DOCX upload gets both a fraud verdict
+    and (for payslips) a chat-ready ingestion.
+  status: working
+  input_type: transaction   # payroll-register row, job-posting record, or payslip PDF/DOCX
+
+pipeline:
+  module: domains.payroll_hr.pipeline
+  class: PayrollHrPipeline
+
+agents:
+  - id: payroll_detector
+    class: domains.payroll_hr.payroll.agents.payroll_detector_agent.PayrollDetectorAgent
+  - id: hr_detector
+    class: domains.payroll_hr.hr.agents.hr_detector_agent.HrDetectorAgent
+  - id: loader
+    class: domains.payroll_hr.payroll.agents.document_loader_agent.DocumentLoaderAgent
+  - id: retriever
+    class: domains.payroll_hr.payroll.agents.retriever_agent.RetrieverAgent
+  - id: reasoning
+    class: domains.payroll_hr.payroll.agents.reasoning_agent.ReasoningAgent
+  - id: validator
+    class: domains.payroll_hr.payroll.agents.validator_agent.ValidatorAgent
+
+vector_db:
+  provider: chroma
+  collection: "${PAYROLL_COLLECTION_NAME:payroll_registers}"
+  chroma_path: "${CHROMA_PATH:./vector_store}"
+
+llm:
+  provider: "${LLM_PROVIDER:ollama}"
+  ollama_model: "${OLLAMA_MODEL:llama3.1:8b}"
+  openai_model: "${OPENAI_MODEL:gpt-4o-mini}"
+  embedding_model: "${EMBEDDING_MODEL:text-embedding-3-small}"
+
+data:
+  payroll_demo_csv: domains/payroll_hr/payroll/data/tier_ml_train.csv
+  hr_demo_csv: domains/payroll_hr/hr/data/train.csv
+  statements_dir: domains/payroll_hr/payroll/data/statements
+
+# One upload, two capabilities -- document_qa is the open chat the user
+# can keep using after ingest; payroll_audit runs once, automatically,
+# inside Pipeline.ingest() itself, routing every extracted line-item
+# breakdown through the real fraud engine (not a separate LLM-only check).
+capabilities:
+  - id: document_qa
+    label: "Ask a question"
+    trigger: on_demand
+  - id: payroll_audit
+    label: "Compliance check"
+    trigger: auto
+    query: >
+      List every earning and deduction line item on this payslip with its
+      exact amount, plus the gross pay and net pay totals, and flag
+      anything that looks miscalculated — an overtime rate that isn't 1.5x
+      the regular rate, a missing required withholding line, a duplicate
+      line item, or deductions that don't add up to the difference between
+      gross and net pay.
+
+classification_hints:
+  keywords:
+    - payslip
+    - payroll register
+    - gross pay
+    - net pay
+    - withholding
+    - deduction
+    - overtime
+    - YTD
+    - pay period
+    - paycheck
+    - base pay
+    - overtime pay
+    - job posting
+    - hiring
+    - recruiter
+    - apply now
+    - job description
+    - candidate

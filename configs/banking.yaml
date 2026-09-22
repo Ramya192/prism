@@ -1,0 +1,138 @@
+# configs/banking.yaml
+# Domain: Banking -- fraud detection AND bank-statement document chat,
+# unified under ONE pipeline (BankingPipeline, built on
+# core/unified_pipeline.py's UnifiedDomainPipeline) under this single
+# config id. Any upload (CSV, PDF, or DOCX) always gets both
+# a fraud verdict and a chat-ready ingestion -- see
+# docs/UNIFIED_INGESTION_VISION.md.
+#
+# Fraud detection: rules -> tiered ML (Tier 1 exact V1-V28 schema, Tier 2
+# real-world-shaped mdtalhask schema) -> LLM, plus the analyst/router/
+# alert chain and the Isolation Forest companion signal -- all untouched,
+# reused via FraudPipeline (domains/banking/fraud/pipeline.py) exactly as
+# before.
+#
+# Document chat: a bank statement PDF/DOCX gets its transactions
+# extracted via ReasoningAgent and mapped ONE RECORD PER TRANSACTION
+# (not one per document -- "score the artifact, not the entity") into
+# the SAME rules->ML->LLM engine the CSV path uses -- see
+# domains/banking/pipeline.py's module docstring for the honest limit:
+# only "Amount" is derivable from a real statement, so these records
+# correctly and HONESTLY resolve to Tier 3 (LLM fallback), not a forced
+# ML match. Still real value over the old, separate LLM-only anomaly
+# check: a genuine rules layer (catching a real $0.00 transaction for
+# free) plus per-transaction LLM reasoning through the actual engine,
+# not one holistic judgment call with no rules at all.
+#
+# No reference corpus yet -- Visa (10.x)/Mastercard (48xx) chargeback
+# reason codes were identified as the target source, but unlike
+# Insurance's CMS excerpt or Payroll's IRS Publication 15-T, no single
+# official free document exists to fetch; it would need hand-curating
+# from the public code list. REFERENCE_SOURCE stays the class default
+# (harmless no-op until that corpus exists -- retrieve() only merges in
+# a reference collection that's actually been ingested).
+
+domain:
+  id: banking
+  name: "Banking"
+  description: >
+    Hybrid rules -> tiered ML -> LLM fraud detection over card/bank-
+    transaction records, and bank-statement document chat, unified in
+    one pipeline. Any CSV/PDF/DOCX upload gets both a fraud verdict and
+    a chat-ready ingestion.
+  status: working
+  input_type: transaction   # CSV rows, manual entry, receipt/cheque image, or bank statement PDF/DOCX
+
+pipeline:
+  module: domains.banking.pipeline
+  class: BankingPipeline
+
+agents:
+  - id: detector
+    class: domains.banking.fraud.agents.detector_agent.FraudDetectorAgent
+  - id: analyst
+    class: domains.banking.fraud.agents.analyst_agent.AnalystAgent
+  - id: alert
+    class: domains.banking.fraud.agents.alert_agent.AlertAgent
+  - id: router
+    class: domains.banking.fraud.agents.routing_agent.RoutingAgent
+  - id: loader
+    class: domains.banking.documents.agents.document_loader_agent.DocumentLoaderAgent
+  - id: retriever
+    class: domains.banking.documents.agents.retriever_agent.RetrieverAgent
+  - id: reasoning
+    class: domains.banking.documents.agents.reasoning_agent.ReasoningAgent
+  - id: validator
+    class: domains.banking.documents.agents.validator_agent.ValidatorAgent
+
+model:
+  name: "${MODEL_NAME:gpt-4o-mini}"
+
+thresholds:
+  ml_fraud_score: 0.7
+  ml_legit_score: 0.3
+  risk_amount: "${RISK_THRESHOLD:50000}"
+
+vector_db:
+  provider: chroma
+  collection: "${BANKING_COLLECTION_NAME:bank_statements}"
+  chroma_path: "${CHROMA_PATH:./vector_store}"
+
+llm:
+  provider: "${LLM_PROVIDER:ollama}"
+  ollama_model: "${OLLAMA_MODEL:llama3.1:8b}"
+  openai_model: "${OPENAI_MODEL:gpt-4o-mini}"
+  embedding_model: "${EMBEDDING_MODEL:text-embedding-3-small}"
+
+data:
+  demo_csv: domains/banking/fraud/data/transactions_balanced.csv
+  statements_dir: domains/banking/documents/data/statements
+
+eval:
+  classification:
+    harness: domains.banking.fraud.eval_harness
+    type: classification   # precision / recall / F1 against a labeled holdout
+  rag:
+    harness: domains.banking.documents.evaluation.rag_evaluator
+    type: ragas   # context_precision / faithfulness / answer_relevancy
+
+# One upload, two capabilities -- document_qa is the open chat the user
+# can keep using after ingest; statement_review runs once, automatically,
+# inside Pipeline.ingest() itself, routing every extracted transaction
+# through the real fraud engine (not a separate LLM-only check).
+capabilities:
+  - id: document_qa
+    label: "Ask a question"
+    trigger: on_demand
+  - id: statement_review
+    label: "Fraud check"
+    trigger: auto
+    query: >
+      List every transaction on this statement with its exact date,
+      amount, type, and description, and flag anything suspicious —
+      unknown merchants, duplicate transactions, unusually large
+      amounts, late-night ATM withdrawals, or rapid successive
+      transactions.
+
+classification_hints:
+  keywords:
+    - transaction
+    - fraud
+    - chargeback
+    - card
+    - amount
+    - merchant
+    - risk score
+    - card verification
+    - suspicious activity
+    - block
+    - statement
+    - account
+    - balance
+    - withdrawal
+    - deposit
+    - IBAN
+    - routing number
+    - opening balance
+    - closing balance
+    - bank

@@ -1,0 +1,32 @@
+{
+  "WALLET001_statement": {
+    "wallet": "demo wallet",
+    "qa_pairs": [
+      {
+        "question": "What was the total activity amount?",
+        "ground_truth": "The total activity amount was $5,295.00.",
+        "context_keywords": ["total", "5295", "5,295"]
+      },
+      {
+        "question": "How many transactions are there?",
+        "ground_truth": "There are 5 transactions in this statement.",
+        "context_keywords": ["Receive", "Swap", "Bridge", "Send", "Trade"]
+      },
+      {
+        "question": "Which transaction was cross-chain?",
+        "ground_truth": "The $800.00 Bridge transaction from Ethereum to Polygon on 2026-02-07 (to the Polygon Bridge) was cross-chain.",
+        "context_keywords": ["Bridge", "Polygon", "cross-chain", "800"]
+      },
+      {
+        "question": "What was the largest transaction?",
+        "ground_truth": "The largest transaction was a $3,000.00 Trade with Coinbase on 2026-02-14.",
+        "context_keywords": ["Trade", "Coinbase", "3000", "3,000"]
+      },
+      {
+        "question": "What was the smallest transaction?",
+        "ground_truth": "The smallest transaction was a $45.00 Send to counterparty 0x7c4d...2b1a on Polygon, on 2026-02-10.",
+        "context_keywords": ["Send", "45", "Polygon"]
+      }
+    ]
+  }
+}

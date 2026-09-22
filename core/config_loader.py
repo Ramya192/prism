@@ -15,7 +15,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 import yaml
 from pydantic import BaseModel, Field
@@ -59,6 +59,20 @@ class ClassificationHints(BaseModel):
     keywords: list[str] = Field(default_factory=list)
 
 
+class CapabilityConfig(BaseModel):
+    """One analysis a document-shaped domain can run against an ingested
+    file. "auto" capabilities run immediately inside Pipeline.ingest() —
+    the one-upload verdict (e.g. bfsi_documents' anomaly_scan, payroll's
+    payroll_audit). "on_demand" capabilities (document_qa) are the open
+    chat step the user can keep using afterward, against the same
+    ingestion — never a reason to re-upload the same document."""
+
+    id: str
+    label: str
+    trigger: Literal["auto", "on_demand"] = "on_demand"
+    query: Optional[str] = None   # fixed internal query this capability runs, if any
+
+
 class DomainConfig(BaseModel):
     id: str
     name: str
@@ -69,6 +83,11 @@ class DomainConfig(BaseModel):
     pipeline: Optional[PipelineConfig] = None
     agents: list[AgentConfig] = Field(default_factory=list)
     classification_hints: ClassificationHints = Field(default_factory=ClassificationHints)
+    # Empty for domains with no document/chat concept (e.g. bfsi_fraud's
+    # one-shot transaction verdict) — capabilities only apply to
+    # document-shaped domains that ingest a file once and then answer
+    # more than one question about it.
+    capabilities: list[CapabilityConfig] = Field(default_factory=list)
 
     # Everything else in the YAML (thresholds, model, vector_db, llm, data,
     # eval, ...) — domain-specific, resolved but otherwise untouched.
@@ -78,8 +97,14 @@ class DomainConfig(BaseModel):
     def is_runnable(self) -> bool:
         return self.status == "working" and self.pipeline is not None
 
+    @property
+    def auto_capability(self) -> Optional[CapabilityConfig]:
+        """The capability (if any) that should run automatically right
+        after ingest, before the user asks anything."""
+        return next((c for c in self.capabilities if c.trigger == "auto"), None)
 
-_KNOWN_TOP_KEYS = {"domain", "pipeline", "agents", "classification_hints"}
+
+_KNOWN_TOP_KEYS = {"domain", "pipeline", "agents", "classification_hints", "capabilities"}
 
 
 class ConfigLoader:
@@ -115,6 +140,7 @@ class ConfigLoader:
             pipeline=raw.get("pipeline"),
             agents=raw.get("agents", []),
             classification_hints=raw.get("classification_hints", {}),
+            capabilities=raw.get("capabilities", []),
             extra=extra,
         )
 

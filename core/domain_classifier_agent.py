@@ -5,7 +5,15 @@
 # human and requires an explicit confirm/override before AgentOrchestrator
 # is asked to do anything.
 #
-# Two-stage guess, both stages free of any hard dependency on an LLM call:
+# Three-stage guess, all free of any hard dependency on an LLM call:
+#   0. If the input's first line looks like a CSV header row, match it
+#      against each domain's known Tier1/Tier2 column schemas (mirrors the
+#      REQUIRED_COLS/FEATURE_COLS each domain's scorer already checks — see
+#      CSV_SCHEMA_HINTS below). A raw CSV export has no prose for keyword
+#      matching to latch onto, so this is the only signal that works for a
+#      bare column dump like "V1,V2,...,V28,Amount,Class". Decisive on a
+#      strong match; falls through to keyword matching otherwise (e.g. a
+#      CSV shaped like nothing Prism has trained on).
 #   1. Keyword overlap against each runnable domain's classification_hints
 #      (configs/*.yaml) — deterministic, zero cost, always available.
 #   2. If an OpenAI key is configured AND the keyword scores are close
@@ -23,9 +31,63 @@ from core.config_loader import ConfigLoader, DomainConfig
 
 _WORD_RE = re.compile(r"[a-z0-9]+")
 
+# Column-name schemas each domain's Tier1/Tier2 scorer already keys off of.
+# Duplicated here (rather than imported) so the classifier stays free of
+# the scorers' heavy deps (lightgbm/xgboost/sklearn) — this list only needs
+# to stay in sync when a scorer's own REQUIRED_COLS/FEATURE_COLS changes.
+# Sources:
+#   banking:            domains/banking/fraud/tools/ml_scorer.py (FEATURE_COLS, Tier1)
+#                        domains/banking/fraud/tools/generalizable_scorer.py (REQUIRED_COLS, Tier2)
+#   insurance:          domains/insurance/tools/claim_scorer.py (Tier1)
+#                        domains/insurance/tools/generalizable_scorer.py (Tier2)
+#   financial_services: domains/financial_services/tools/scam_scorer.py (Tier1)
+#                        domains/financial_services/tools/wash_trading_scorer.py (Tier2)
+#   payroll_hr:         domains/payroll_hr/payroll/tools/anomaly_scorer.py (Tier1, payroll)
+#                        domains/payroll_hr/payroll/tools/generalizable_scorer.py (Tier2, payroll)
+#                        domains/payroll_hr/hr/tools/posting_scorer.py (Tier1, hr postings)
+CSV_SCHEMA_HINTS: dict[str, list[list[str]]] = {
+    "banking": [
+        [f"V{i}" for i in range(1, 29)] + ["Amount", "Time"],
+        ["Transaction_Amount", "Account_Age", "Credit_Score"],
+    ],
+    "insurance": [
+        ["Claim_Amount", "Approved_Amount", "Days_Between_Service_and_Claim"],
+        ["Claim_Amount", "Policy_Number", "Provider_Patient_Distance_Miles"],
+    ],
+    "financial_services": [
+        ["transaction_amount_usd", "sender_wallet_age_days", "is_cross_chain"],
+        ["notional_usd", "round_trip_score", "counterparty_reuse_ratio"],
+    ],
+    "payroll_hr": [
+        ["BasePay", "OvertimePay", "OtherPay", "Stated_TotalPay"],
+        ["GROSS", "Deduction", "Net_Pay"],
+        ["title", "description", "telecommuting", "has_company_logo", "has_questions"],
+    ],
+}
+
+# A schema match needs at least this fraction of its columns present in the
+# uploaded header to be treated as decisive (vs. keyword/LLM fallback).
+CSV_SCHEMA_MATCH_THRESHOLD = 0.66
+
 
 def _tokenize(text: str) -> set[str]:
     return set(_WORD_RE.findall(text.lower()))
+
+
+def _extract_csv_header(text: str) -> list[str] | None:
+    """Returns the column names of `text`'s first line if it looks like a
+    CSV header row (2+ comma-separated, identifier-shaped fields with no
+    sentence punctuation), else None. Deliberately conservative — prose
+    that happens to contain a comma must never be mistaken for a header."""
+    first_line = next((ln.strip() for ln in text.splitlines() if ln.strip()), "")
+    if "," not in first_line or any(c in first_line for c in ".!?\""):
+        return None
+    fields = [f.strip().strip("'\"") for f in first_line.split(",")]
+    if len(fields) < 2:
+        return None
+    if not all(re.fullmatch(r"[A-Za-z_][A-Za-z0-9_ ]*", f) for f in fields):
+        return None
+    return fields
 
 
 @dataclass
@@ -52,6 +114,29 @@ class DomainClassifierAgent:
 
     def __init__(self, config_loader: ConfigLoader | None = None):
         self.config_loader = config_loader or ConfigLoader()
+
+    def _csv_schema_guess(self, header_cols: list[str], domains: list[DomainConfig]) -> DomainGuess | None:
+        """Best domain match for a raw CSV header row, by overlap against
+        each domain's known Tier1/Tier2 schemas. Returns None if nothing
+        clears CSV_SCHEMA_MATCH_THRESHOLD (e.g. a CSV shaped like nothing
+        Prism has trained on) so the caller can fall back to keyword
+        matching against the same header text."""
+        header_lower = {c.lower() for c in header_cols}
+        runnable_ids = {d.id for d in domains}
+        best: tuple[float, str, list[str]] | None = None
+        for domain_id, schemas in CSV_SCHEMA_HINTS.items():
+            if domain_id not in runnable_ids:
+                continue
+            for schema in schemas:
+                matched = [c for c in schema if c.lower() in header_lower]
+                ratio = len(matched) / len(schema)
+                if ratio >= CSV_SCHEMA_MATCH_THRESHOLD and (best is None or ratio > best[0]):
+                    best = (ratio, domain_id, matched)
+        if best is None:
+            return None
+        ratio, domain_id, matched = best
+        d = next(d for d in domains if d.id == domain_id)
+        return DomainGuess(d.id, d.name, ratio, matched)
 
     def _keyword_scores(self, text: str, domains: list[DomainConfig]) -> list[DomainGuess]:
         tokens = _tokenize(text)
@@ -115,6 +200,12 @@ Reason: <one sentence>"""
         domains = self.config_loader.list_domains(runnable_only=runnable_only)
         if not domains:
             return ClassificationResult(best_guess=None, all_scores=[], method="keyword")
+
+        header_cols = _extract_csv_header(text or "")
+        if header_cols:
+            schema_guess = self._csv_schema_guess(header_cols, domains)
+            if schema_guess:
+                return ClassificationResult(best_guess=schema_guess, all_scores=[schema_guess], method="csv_schema")
 
         scored = self._keyword_scores(text or "", domains)
         top_two = scored[:2]

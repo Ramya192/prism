@@ -1,0 +1,102 @@
+# configs/financial_services.yaml
+# Domain: Financial Services -- fraud detection AND wallet/exchange
+# statement document chat, unified under ONE pipeline
+# (FinancialServicesPipeline, built on core/unified_pipeline.py's
+# UnifiedDomainPipeline). Unlike Banking/Payroll & HR, this domain has no
+# separate pre-existing RAG agents to compose -- its document chat and
+# fraud detection were designed together as one pipeline from the start.
+#
+# Tier 1: per-transaction blockchain scam detection (real is_scam label).
+# Tier 2: per-transaction exchange/DEX market-manipulation detection
+#   (wash trading / pump-and-dump / ramping).
+# See domains/financial_services/data/prepare_data.py and
+# prepare_tier2_data.py for the full dataset search.
+#
+# Document chat: a wallet/exchange statement's transactions are extracted
+# and mapped toward the fraud engine, but HONESTLY -- see
+# domains/financial_services/pipeline.py's module docstring -- neither
+# ML tier's required fields (sender_wallet_age_days; round_trip_score/
+# counterparty_reuse_ratio) can ever be derived from a real document, so
+# every document-sourced record resolves to Tier 3 (LLM fallback), and
+# unlike Banking, this domain's rules layer is tier-gated and never fires
+# on a Tier 3 record either. Still real value: real LLM reasoning through
+# the actual engine, with every extracted field enriching that reasoning.
+#
+# Reference corpus: FinCEN Guidance FIN-2019-G001 (CVC/money-transmitter
+# definitions, MSB AML program requirements) -- ingested via
+# domains/financial_services/data/ingest_reference_corpus.py, see
+# domains/financial_services/reference_corpus/fincen_cvc_guidance_excerpt.txt.
+
+domain:
+  id: financial_services
+  name: "Financial Services"
+  description: >
+    Fraud detection (rules -> tiered ML -> LLM) over non-bank crypto/
+    digital-asset transactions, and wallet/exchange statement document
+    chat, unified in one pipeline. Any CSV/PDF/DOCX upload gets both a
+    fraud verdict and a chat-ready ingestion, though a document's
+    extracted transactions honestly resolve to the LLM-fallback tier
+    only -- see the pipeline module's docstring for why.
+  status: working
+  input_type: transaction   # blockchain/exchange transaction record (CSV row) or wallet/exchange statement PDF/DOCX
+
+pipeline:
+  module: domains.financial_services.pipeline
+  class: FinancialServicesPipeline
+
+agents:
+  - id: detector
+    class: domains.financial_services.agents.fintech_detector_agent.FintechDetectorAgent
+  - id: loader
+    class: domains.financial_services.agents.document_loader_agent.DocumentLoaderAgent
+  - id: retriever
+    class: domains.financial_services.agents.retriever_agent.RetrieverAgent
+  - id: reasoning
+    class: domains.financial_services.agents.reasoning_agent.ReasoningAgent
+  - id: validator
+    class: domains.financial_services.agents.validator_agent.ValidatorAgent
+
+vector_db:
+  provider: chroma
+  collection: "${FINANCIAL_SERVICES_COLLECTION_NAME:fintech_statements}"
+  chroma_path: "${CHROMA_PATH:./vector_store}"
+
+llm:
+  provider: "${LLM_PROVIDER:ollama}"
+  ollama_model: "${OLLAMA_MODEL:llama3.1:8b}"
+  openai_model: "${OPENAI_MODEL:gpt-4o-mini}"
+  embedding_model: "${EMBEDDING_MODEL:text-embedding-3-small}"
+
+data:
+  demo_csv: domains/financial_services/data/train.csv
+  tier2_demo_csv: domains/financial_services/data/tier2_train.csv
+  statements_dir: domains/financial_services/data/statements
+
+capabilities:
+  - id: document_qa
+    label: "Ask a question"
+    trigger: on_demand
+  - id: statement_review
+    label: "Fraud check"
+    trigger: auto
+    query: >
+      List every transaction on this statement with its exact date,
+      amount, transaction type, blockchain, and counterparty, and flag
+      anything suspicious — duplicate transactions, a counterparty
+      appearing twice with conflicting amounts, or an internally
+      inconsistent total.
+
+classification_hints:
+  keywords:
+    - blockchain
+    - crypto wallet
+    - digital asset
+    - wash trading
+    - pump and dump
+    - cross-chain
+    - DEX
+    - gas fee
+    - token
+    - exchange transaction
+    - wallet statement
+    - transaction history

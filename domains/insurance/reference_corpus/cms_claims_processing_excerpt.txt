@@ -1,0 +1,102 @@
+SOURCE: Medicare Claims Processing Manual, Chapter 26 — "Completing and
+Processing Form CMS-1500 Data Set" (Rev. 12779; Issued 08-09-24).
+Publisher: Centers for Medicare & Medicaid Services (CMS).
+URL: https://www.cms.gov/regulations-and-guidance/guidance/manuals/downloads/clm104c26.pdf
+Retrieved and excerpted for Prism's Insurance domain reference corpus —
+curated to the sections most relevant to claim validity and compliance
+review, not the full 78-page chapter. Section numbers below match the
+original manual exactly; quoted text is reproduced verbatim from the
+source PDF unless marked as a paraphrase.
+
+== 10.1 — Claims That Are Incomplete or Contain Invalid Information ==
+(Rev. 145, 04-23-04)
+"If a claim is submitted with incomplete or invalid information, it may
+be returned to the submitter as unprocessable." This is the manual's
+core validity rule: a claim is not "denied" for incomplete data, it is
+returned as unprocessable — a distinct administrative status from a
+denial for lack of medical necessity or coverage.
+
+== 10.2 — Required Patient and Insured Information ==
+Item 1a (patient's Medicare Beneficiary Identifier) and Item 2 (patient's
+name as shown on the Medicare card) are explicitly marked "required
+field[s]." Item 11 is a required field with a specific compliance
+implication: "BY COMPLETING THIS ITEM, THE PHYSICIAN/SUPPLIER
+ACKNOWLEDGES HAVING MADE A GOOD FAITH EFFORT TO DETERMINE WHETHER
+MEDICARE IS THE PRIMARY OR SECONDARY PAYER." If insurance primary to
+Medicare exists, item 11 must contain the insured's policy/group number
+and items 4, 6, and 7 must also be completed — an incomplete secondary-
+payer determination is itself a compliance flag, not just a missing field.
+
+Medicare Secondary Payer (MSP) circumstances listed explicitly: Group
+Health Plan Coverage (Working Aged, Disability/Large Group Health Plan,
+End Stage Renal Disease), No Fault and/or Other Liability, and
+Work-Related Illness/Injury (Workers' Compensation, Black Lung, Veterans
+Benefits). For a paper claim to be considered for MSP benefits, a copy
+of the primary payer's Explanation of Benefits (EOB) notice must be
+forwarded along with the claim form.
+
+== 10.4 — Provider/Supplier Information: Referring/Ordering Physicians ==
+The ordering/referring requirement (effective January 1, 1992, required
+by §1833(q) of the Social Security Act) mandates that "[a]ll claims for
+Medicare covered services and items that are the result of a physician's
+order or referral shall include the ordering/referring physician's
+name." Effective May 23, 2008, this must be the physician's National
+Provider Identifier (NPI), not just a name — "all provider identifiers
+submitted on the CMS-1500 claim form MUST be in the form of an NPI."
+Categories of services explicitly requiring referring/ordering
+information: parenteral and enteral nutrition, immunosuppressive drug
+claims, Hepatitis B claims, diagnostic laboratory services, diagnostic
+radiology services, portable x-ray services, consultative services,
+durable medical equipment, and (effective for dates of service on or
+after October 1, 2012) physical therapy, occupational therapy, and
+speech-language pathology services.
+
+== 10.5 / 24B — Place of Service (POS) and Setting Consistency ==
+Item 24B (place of service code) is a required field identifying "the
+setting" for each service line. The manual gives a concrete consistency
+check: "When a service is rendered to a patient who is a registered
+inpatient or an outpatient... of a hospital, use the inpatient hospital
+POS code 21, Off Campus-Outpatient Hospital POS code 19, or On
+Campus-Outpatient Hospital POS code 22, respectively." A claim whose
+billed procedure type is inconsistent with its stated place of service
+(e.g., an inpatient-only procedure billed under an outpatient POS code)
+is a documented mismatch pattern this section exists to prevent.
+
+== Item 21 — Diagnosis Coding Rules ==
+Up to 12 diagnosis codes may be entered (form version 02/12), each
+"[using] the highest level of specificity," entered in priority order.
+Two explicit validity rules: "Do not report both ICD-9-CM and ICD-10-CM
+codes on the same claim form" (a claim spanning both eras must be split
+into separate claims by date), and "Do not insert a period in the
+ICD-9-CM or ICD-10-CM code." Item 24E requires each service line to
+reference a specific diagnosis code letter from item 21 — a service
+line with no valid diagnosis reference, or one referencing a diagnosis
+code that doesn't exist in item 21, is an internally inconsistent claim.
+
+== Item 24D — Procedure Coding and Unlisted/NOC Codes ==
+Procedures are billed via HCPCS codes. For "unlisted procedure code[s]"
+or "Not Otherwise Classified" (NOC) codes, the manual sets an explicit
+completeness rule: a narrative description is required either in item
+19 or as an attachment. "Return as unprocessable if an 'unlisted
+procedure code' or a NOC code is indicated in item 24d, but an
+accompanying narrative is not present in item 19 or on an attachment."
+NOC laboratory tests specifically must include "the specific name of the
+laboratory test(s) and/or a short descriptor" or be returned
+unprocessable per Pub. 100-04, Chapter 1, Section 80.3.2.
+
+== Item 24A — Service Dates ==
+"Return as unprocessable if a date of service extends more than 1 day,
+and a valid 'to' date is not present" — an open-ended date range without
+a closing date is treated as an incomplete claim, not silently accepted.
+
+== Physician Definition (§1861(r) of the Social Security Act) ==
+The manual defines "physician," for claim-completion purposes, as
+limited to five specific practitioner types: (1) a doctor of medicine or
+osteopathy; (2) a doctor of dental surgery or dental medicine; (3) a
+doctor of podiatric medicine (for specified statutory purposes only);
+(4) a doctor of optometry (for specified statutory purposes only); or
+(5) a licensed chiropractor, and only with respect to manual spinal
+manipulation to correct a subluxation. A claim listing a referring or
+performing "physician" outside these five categories, without the
+non-physician-practitioner rules of Pub. 100-02 Chapter 15 being
+invoked, does not meet this manual's definition.

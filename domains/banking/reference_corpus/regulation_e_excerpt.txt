@@ -1,0 +1,97 @@
+SOURCE: Regulation E (Electronic Fund Transfer Act implementing regulation),
+12 CFR Part 1005 — "Electronic Fund Transfers."
+Publisher: Consumer Financial Protection Bureau (CFPB).
+URLs (section-specific, current regulation text):
+  https://www.consumerfinance.gov/rules-policy/regulations/1005/2/
+  https://www.consumerfinance.gov/rules-policy/regulations/1005/6/
+  https://www.consumerfinance.gov/rules-policy/regulations/1005/11/
+Retrieved and excerpted for Prism's Banking domain reference corpus —
+curated to the sections most relevant to unauthorized-transaction and
+dispute/error-resolution review, not the full regulation. Section numbers
+below match the regulation exactly; quoted text is reproduced verbatim
+from the source unless marked as a paraphrase. Regulation E governs
+electronic fund transfers (debit card transactions, ACH, bank-to-bank
+transfers) — not credit cards, which fall under Regulation Z/the Fair
+Credit Billing Act instead; a Banking-domain question about a credit
+card dispute should be answered with that distinction, not this corpus.
+
+== 1005.2(m) — Definition of "Unauthorized Electronic Fund Transfer" ==
+An unauthorized EFT is "an electronic fund transfer from a consumer's
+account initiated by a person other than the consumer without actual
+authority" and that provides no benefit to the consumer. Three explicit
+exclusions matter for fraud review:
+1. A person the consumer themself "furnished the access device to"
+   remains an AUTHORIZED user even if they exceed whatever limit the
+   consumer meant to grant them — unless and until the consumer notifies
+   the institution to revoke that authority. In practice: a family
+   member or employee given a debit card who then overspends is not
+   committing an "unauthorized" transfer under this definition, however
+   much the consumer disputes it after the fact.
+2. A transfer made "with fraudulent intent by the consumer or any person
+   acting in concert with the consumer" is explicitly NOT an unauthorized
+   transfer — a consumer cannot claim their own staged/collusive fraud as
+   an unauthorized-transfer dispute.
+3. A transfer "by the financial institution or its employee" is not an
+   unauthorized transfer under this definition (it may be a different
+   kind of error — see 1005.11 below).
+
+== 1005.6 — Consumer Liability for Unauthorized Transfers ==
+Liability scales with how quickly the consumer reports the loss/theft of
+an access device or the unauthorized transfer, in three tiers:
+- Tier 1 (prompt notice): "If the consumer notifies the financial
+  institution within two business days after learning of the loss or
+  theft of the access device, the consumer's liability shall not exceed
+  the lesser of $50 or the amount of unauthorized transfers that occur
+  before notice to the financial institution."
+- Tier 2 (delayed notice, beyond 2 business days but reported): liability
+  up to $500 — up to $50 for the first two business days, plus any
+  additional unauthorized transfers before notice, PROVIDED the
+  institution can show that timely reporting would have prevented those
+  additional transfers.
+- Tier 3 (statement-period notice): "A consumer must report an
+  unauthorized electronic fund transfer that appears on a periodic
+  statement within 60 days of the financial institution's transmittal of
+  the statement to avoid liability for subsequent transfers" — beyond 60
+  days, liability is effectively unlimited for transfers occurring after
+  that point that further notice would have prevented.
+These liability limits only apply once the institution has met its own
+disclosure obligations and provided an access device with an acceptable
+means of identifying the consumer; reasonable extensions apply for
+extenuating circumstances (e.g., extended travel, hospitalization).
+
+== 1005.11 — Procedures for Resolving Errors ==
+"Error," for dispute-handling purposes, is a defined term broader than
+just unauthorized transfers — 1005.11(a)(1) lists: an unauthorized EFT;
+an incorrect EFT to or from the consumer's account; an EFT omitted from
+a periodic statement; a computational or bookkeeping error by the
+institution; an incorrect amount received from an electronic terminal;
+a transfer not properly identified per 1005.9/1005.10(a); and a request
+for documentation or clarification about a specific transfer. Routine
+balance inquiries, tax-record requests, and duplicate documentation
+requests are explicitly NOT "errors" under this definition.
+
+Consumer notification timeline: the consumer must report the alleged
+error within 60 days after the institution sent the periodic statement
+reflecting it (or, for a documentation-based request, within 60 days of
+receiving that documentation).
+
+Institution investigation timeline:
+- Standard: investigate within "10 business days of receiving a notice
+  of error" and report results within 3 business days after concluding.
+- Extended (45-day option): if investigation can't finish in 10 business
+  days, the institution gets up to 45 calendar days total — but ONLY if
+  it provisionally credits the consumer's account (including applicable
+  interest) within the original 10-business-day window.
+- New-account extension: for transfers within 30 days of the account's
+  first deposit, the standard window extends to 20 business days (and
+  the extended option to 90 calendar days).
+- POS/foreign-transaction extension: the 45-day extended investigation
+  period extends to 90 calendar days for point-of-sale debit card
+  transactions and for transfers not initiated within a state.
+
+A dispute resolved outside these timelines, or an "unauthorized
+transaction" claim that actually falls under the 1005.2(m) authorized-
+user or consumer-fraudulent-intent exclusions above, is a compliance-
+relevant inconsistency worth surfacing during document/statement review
+— distinct from, and in addition to, whatever a transaction's own
+amount/pattern-based fraud score already says about it.

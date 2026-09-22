@@ -1,0 +1,12 @@
+# Prism's UI (scratch_console_concepts.html) is a fixed light palette by
+# design — "like a screenshot, independent of the viewer's theme" — so pin
+# the app to light mode instead of following the OS/browser dark-mode
+# preference (which otherwise turns the background black while the
+# hardcoded light-palette CSS in streamlit_app.py stays unchanged,
+# producing a broken half-dark/half-light page).
+[theme]
+base = "light"
+primaryColor = "#2f5fdb"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f6f7f9"
+textColor = "#191d24"

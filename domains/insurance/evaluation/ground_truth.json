@@ -1,0 +1,82 @@
+{
+  "CLM001_claim": {
+    "patient": "Dana Whitfield",
+    "qa_pairs": [
+      {
+        "question": "What was the billed claim amount?",
+        "ground_truth": "The billed claim amount was $480.00.",
+        "context_keywords": ["Claim Amount", "480"]
+      },
+      {
+        "question": "What was the approved amount?",
+        "ground_truth": "The approved amount was $400.00.",
+        "context_keywords": ["Approved Amount", "400"]
+      },
+      {
+        "question": "What is the patient's age and gender?",
+        "ground_truth": "The patient is a 55-year-old male.",
+        "context_keywords": ["Patient Age", "55", "Male"]
+      },
+      {
+        "question": "What insurance type and provider specialty does this claim involve?",
+        "ground_truth": "This is a Medicaid claim under Cardiology.",
+        "context_keywords": ["Medicaid", "Cardiology"]
+      },
+      {
+        "question": "Are there any inconsistencies in this claim?",
+        "ground_truth": "No inconsistencies were found. The approved amount ($400.00) does not exceed the billed amount ($480.00), and the claim date (2026-01-22) is after the service date (2026-01-14).",
+        "context_keywords": ["Service Date", "Claim Date", "2026-01-14", "2026-01-22"]
+      }
+    ]
+  },
+  "CLM002_claim": {
+    "patient": "Renee Okafor",
+    "qa_pairs": [
+      {
+        "question": "What was the billed claim amount?",
+        "ground_truth": "The billed claim amount was $220.00.",
+        "context_keywords": ["Claim Amount", "220"]
+      },
+      {
+        "question": "What was the approved amount?",
+        "ground_truth": "The approved amount was $180.00.",
+        "context_keywords": ["Approved Amount", "180"]
+      },
+      {
+        "question": "What insurance type and provider specialty does this claim involve?",
+        "ground_truth": "This is a Private insurance claim under Dermatology.",
+        "context_keywords": ["Private", "Dermatology"]
+      },
+      {
+        "question": "What visit type is this claim for?",
+        "ground_truth": "This claim is for an Outpatient visit.",
+        "context_keywords": ["Visit Type", "Outpatient"]
+      }
+    ]
+  },
+  "CLM003_claim": {
+    "patient": "Priya Subramanian",
+    "qa_pairs": [
+      {
+        "question": "What was the billed claim amount?",
+        "ground_truth": "The billed claim amount was $500.00.",
+        "context_keywords": ["Claim Amount", "500"]
+      },
+      {
+        "question": "What was the approved amount?",
+        "ground_truth": "The approved amount was $9,999.00.",
+        "context_keywords": ["Approved Amount", "9999", "9,999"]
+      },
+      {
+        "question": "Are there any inconsistencies in this claim?",
+        "ground_truth": "Yes -- the approved amount ($9,999.00) exceeds the billed claim amount ($500.00), which is not possible under normal claims processing rules.",
+        "context_keywords": ["exceeds", "500", "9999"]
+      },
+      {
+        "question": "What insurance type and visit type does this claim involve?",
+        "ground_truth": "This is a Medicare claim for an Inpatient visit under Orthopedics.",
+        "context_keywords": ["Medicare", "Inpatient", "Orthopedics"]
+      }
+    ]
+  }
+}
