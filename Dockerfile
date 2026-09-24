@@ -10,6 +10,11 @@
 # exercised in CI). Bump this deliberately, together, if local dev moves.
 FROM python:3.13-slim
 
+# print() output (model-load messages, ingest progress) must reach
+# `docker compose logs` immediately; Python block-buffers stdout when it
+# isn't a terminal, which otherwise hides it.
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
@@ -30,4 +35,8 @@ COPY main.py .
 
 EXPOSE 8501
 
-CMD ["streamlit", "run", "streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.headless=true"]
+# The file watcher is a dev-time hot-reload feature: on any source change it
+# deletes every watched module from sys.modules, which crashes a concurrent
+# session mid-import (KeyError: 'core'). Nothing edits source in a running
+# container, so it is off here; local `streamlit run` keeps it.
+CMD ["streamlit", "run", "streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.headless=true", "--server.fileWatcherType=none"]
