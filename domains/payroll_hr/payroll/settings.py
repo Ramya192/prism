@@ -1,9 +1,9 @@
 # domains/payroll_hr/payroll/settings.py
-# Own copy of bfsi_documents/settings.py's env-var pattern — same local-vs-
+# Own copy of banking/documents/settings.py's env-var pattern — same local-vs-
 # prod defaulting logic, own collection name so the two domains' ingested
 # chunks never collide in the same vector store. See core/config_loader.py's
 # capabilities design note: payroll deliberately does not share a runtime
-# Settings instance with bfsi_documents, so a config change to one domain
+# Settings instance with banking documents, so a config change to one domain
 # can never silently affect the other.
 
 from dotenv import load_dotenv

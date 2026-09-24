@@ -9,7 +9,7 @@
 # been a third copy; refactored to a shared base before that happened.
 #
 # Domain-specific behavior is a single override point (_extract_metadata),
-# not a config flag — bfsi_documents' bank-name detection becomes a
+# not a config flag — banking documents' bank-name detection becomes a
 # one-method override in its subclass instead of an if/else branch here.
 #
 # Any-format ingestion (docs/UNIFIED_INGESTION_VISION.md): load() accepts
@@ -24,7 +24,7 @@
 # mapping their extracted text into a fraud-detector record happens one
 # level up (UnifiedDomainPipeline), via the LLM extraction step, not here.
 #
-# IMPORTANT: bfsi_documents is live in production and already RAGAS-
+# IMPORTANT: banking documents is live in production and already RAGAS-
 # evaluated. The PDF path here changes zero logic and zero prompt/
 # behavior for it — every PDF-related line is the exact same code that
 # lived in its document_loader_agent.py, just parameterized by a
@@ -54,9 +54,44 @@ class DuplicateDocumentError(ValueError):
     def __init__(self, filename: str, existing: str):
         self.filename, self.existing = filename, existing
         super().__init__(
-            f"'{filename}' was already ingested (identical content stored as '{existing}') "
+            f"'{filename}' was already ingested (identical content stored as '{display_name(existing)}') "
             "-- not ingesting it again."
         )
+
+
+class EmptyDocumentError(ValueError):
+    """Raised when a file yields no extractable text -- typically a scanned/
+    image-only PDF (there is no OCR step) or an empty DOCX/CSV. Nothing can
+    be chunked, embedded, retrieved or scored from it, and Chroma rejects an
+    empty add outright, so this is caught up front with a message the UI can
+    show instead of a raw stack trace."""
+
+    def __init__(self, filename: str):
+        self.filename = filename
+        super().__init__(
+            f"'{filename}' has no extractable text -- it may be a scanned/image-only "
+            "document (OCR isn't supported) or an empty file."
+        )
+
+
+# A session-owned document is stored as "<filename>@<owner>" so two visitors
+# uploading a same-named file never overwrite each other's chunks (the
+# public deployment shares one vector store across everyone), and
+# display_name() strips the suffix again for anything user-facing.
+OWNER_SEP = "@"
+
+
+def stored_name(filename: str, owner: str | None) -> str:
+    return f"{filename}{OWNER_SEP}{owner}" if owner else filename
+
+
+def display_name(stored: str) -> str:
+    """Inverse of stored_name(), for a name that may or may not carry an
+    owner suffix (reference-corpus and test documents never do)."""
+    head, sep, tail = stored.rpartition(OWNER_SEP)
+    # An owner id is alphanumeric; a filename's tail ("b.pdf" in "a@b.pdf")
+    # has a dot, so an '@' inside an unowned filename isn't mistaken for one.
+    return head if sep and head and tail.isalnum() else stored
 
 
 class BaseDocumentLoaderAgent:
@@ -71,7 +106,7 @@ class BaseDocumentLoaderAgent:
 
     def _extract_metadata(self, full_text: str) -> dict:
         """Override for domain-specific per-document metadata (e.g.
-        bfsi_documents' bank_name detection). Empty by default -- most
+        banking documents' bank_name detection). Empty by default -- most
         document-shaped domains (payroll included) don't need this."""
         return {}
 
@@ -100,7 +135,10 @@ class BaseDocumentLoaderAgent:
         arbitrarily) and one raw dict for fraud scoring. Every row is
         included in `records`; only the first MAX_CSV_CHUNK_ROWS are
         embedded as chunks (see the module-level comment for why)."""
-        df = pd.read_csv(file_path)
+        try:
+            df = pd.read_csv(file_path)
+        except pd.errors.EmptyDataError:
+            return [], []   # load() turns "no chunks" into EmptyDocumentError
         records = df.to_dict(orient="records")
         chunk_rows = records[:MAX_CSV_CHUNK_ROWS]
         chunks = [
@@ -119,22 +157,32 @@ class BaseDocumentLoaderAgent:
     def _content_hash(file_path: str) -> str:
         return hashlib.sha256(Path(file_path).read_bytes()).hexdigest()
 
-    def find_duplicate(self, file_path: str) -> str | None:
+    def find_duplicate(self, file_path: str, owner: str | None = None) -> str | None:
         """Name of an already-ingested document whose file bytes are
         identical to `file_path`'s, else None. Keyed on a content hash
         stored in every chunk's metadata (not the filename -- uploads
         arrive as temp files, and a renamed copy is still a duplicate),
-        so it holds across batches and sessions for as long as the vector
-        store does. Documents ingested before this check existed carry no
-        hash and are never reported as duplicates."""
+        so it holds across batches and for as long as the vector store
+        does. Documents ingested before this check existed carry no hash
+        and are never reported as duplicates.
+
+        `owner` (a browser-session id) scopes the check to that owner's
+        own documents: on the shared public store, another visitor having
+        uploaded the same file must neither block this one nor leak the
+        other's filename. None checks the whole store (CLI/tests)."""
         content_hash = self._content_hash(file_path)
-        found = self.collection.get(where={"content_hash": content_hash}, limit=1)
+        where = {"content_hash": content_hash}
+        if owner:
+            where = {"$and": [where, {"owner": owner}]}
+        found = self.collection.get(where=where, limit=1)
         return found["metadatas"][0]["source"] if found["ids"] else None
 
-    def load(self, file_path: str, filename: str = None) -> dict:
+    def load(self, file_path: str, filename: str = None, owner: str | None = None) -> dict:
         """Extension decides HOW text is extracted; it never decides
         whether RAG or fraud-scoring runs (both always do, one level up
-        in UnifiedDomainPipeline) -- see the module docstring."""
+        in UnifiedDomainPipeline) -- see the module docstring. `owner`
+        namespaces the stored document (see stored_name()); None keeps
+        the plain filename, exactly as before."""
         filename = filename or Path(file_path).stem
         ext = Path(file_path).suffix.lower()
 
@@ -155,8 +203,14 @@ class BaseDocumentLoaderAgent:
             full_text = self._extract_pdf_text(file_path)
             chunks = self.splitter.split_text(full_text)
 
+        if not chunks:
+            raise EmptyDocumentError(filename)
+
+        filename = stored_name(filename, owner)
         extra_metadata = {**self._extract_metadata(full_text), "content_hash": self._content_hash(file_path)}
-        vectors = self.embedder.embed_documents(chunks) if chunks else []
+        if owner:
+            extra_metadata["owner"] = owner
+        vectors = self.embedder.embed_documents(chunks)
 
         self._store_chroma(filename, chunks, vectors, extra_metadata)
         return {

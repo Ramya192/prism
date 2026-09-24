@@ -47,6 +47,11 @@ EXTRACTION_QUERY = (
 
 class InsurancePipeline(UnifiedDomainPipeline):
     EXTRACTION_QUERY = EXTRACTION_QUERY
+    DOCUMENT_TYPE_DESCRIPTION = (
+        "a specific insurance claim or explanation-of-benefits (EOB) document stating the "
+        "billed and approved amounts for one patient's visit or service"
+    )
+    NON_MATCH_EXAMPLES = "a provider manual, a benefits brochure, a policy handbook, or a regulation"
     # Opt-in (see core/unified_pipeline.py's REFERENCE_SOURCE docstring) --
     # set here, not inherited as a default, because Insurance has actually
     # run domains/insurance/data/ingest_reference_corpus.py against its

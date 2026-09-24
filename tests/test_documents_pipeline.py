@@ -6,7 +6,7 @@ service (single Streamlit deployment), so these call BankingPipeline
 (domains/banking/pipeline.py, unifying fraud detection and document chat
 under one pipeline -- see core/unified_pipeline.py) directly in-process
 instead. Same underlying assertions on ingest/analyze behaviour as the
-original bfsi_documents suite; the SSE-streaming test class is dropped
+original banking documents suite; the SSE-streaming test class is dropped
 since there's no streaming endpoint to test.
 
 Requires OPENAI_API_KEY (embeddings always go through OpenAI) and, for the
@@ -25,6 +25,8 @@ from pathlib import Path
 from fpdf import FPDF
 
 from core.orchestrator import AgentOrchestrator
+
+pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("reference_corpora")]
 
 
 # ══════════════════════════════════════════════════════════════════════════════

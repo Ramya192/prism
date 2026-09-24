@@ -1,11 +1,11 @@
 # domains/payroll_hr/payroll/agents/payroll_detector_agent.py
 # PayrollDetectorAgent — the CSV payroll-register counterpart to
-# bfsi_fraud's FraudDetectorAgent, same rules -> tiered ML -> LLM shape,
+# banking fraud's FraudDetectorAgent, same rules -> tiered ML -> LLM shape,
 # for uploads of many employee rows at once (as opposed to this domain's
 # existing single-payslip PDF/RAG pipeline in pipeline.py, which is
 # untouched and stays a separate capability).
 #
-# Schema tiering (same reasoning as bfsi_fraud's detect_tier() — see that
+# Schema tiering (same reasoning as banking fraud's detect_tier() — see that
 # module's docstring): a payroll-register CSV can come in more than one
 # real export convention, and each needs its own trained scorer:
 #   Tier 1 — BasePay/OvertimePay/OtherPay/Stated_TotalPay (SF Salaries'
@@ -98,7 +98,7 @@ class PayrollDetectorAgent:
 
     # ── LAYER 1: Rules — deterministic reconciliation ────────────────────
     # Each tier's own check, using ITS OWN field names -- deliberately not
-    # a shared "canonical field" remap the way bfsi_fraud does, because
+    # a shared "canonical field" remap the way banking fraud does, because
     # tier1 and tier2 aren't just different names for the same math (3-way
     # sum vs. 2-way difference), so there's no single canonical form to
     # remap onto here.

@@ -67,6 +67,11 @@ DOCUMENT_CONTEXT = (
 class FinancialServicesPipeline(UnifiedDomainPipeline):
     EXTRACTION_QUERY = EXTRACTION_QUERY
     DOCUMENT_SCORING_CONTEXT = DOCUMENT_CONTEXT
+    DOCUMENT_TYPE_DESCRIPTION = (
+        "a crypto wallet or exchange activity statement -- a list of individual transfers, "
+        "deposits, withdrawals, or trades"
+    )
+    NON_MATCH_EXAMPLES = "a whitepaper, a terms-of-service or regulatory guidance document, or a marketing page"
     # Opt-in (see core/unified_pipeline.py's REFERENCE_SOURCE docstring) --
     # set here, not inherited as a default, because Financial Services has
     # actually run domains/financial_services/data/ingest_reference_corpus.py

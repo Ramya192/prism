@@ -22,6 +22,8 @@
 
 import numpy as np
 import pandas as pd
+
+from core.model_store import load_or_train
 from xgboost import XGBClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 
@@ -51,7 +53,7 @@ class PostingFraudScorer:
         self.scaler = StandardScaler()
         self.encoders = {c: LabelEncoder() for c in self.CATEGORICAL_COLS}
         self.trained = False
-        self._train(data_path)
+        load_or_train(self, data_path)
 
     @staticmethod
     def _derive_features(record: dict) -> dict:

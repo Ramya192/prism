@@ -46,7 +46,7 @@ class FraudDetectorAgent:
 
     VALID_RISK_LEVELS = {"LOW", "MEDIUM", "HIGH"}
 
-    def __init__(self, name, data_path="domains/banking/fraud/data/transactions_balanced.csv"):
+    def __init__(self, name, data_path="domains/banking/fraud/data/train.csv"):
         self.name = name
         self.cases_reviewed = 0
         self.llm = ChatOpenAI(
@@ -373,11 +373,14 @@ class FraudDetectorAgent:
         # running it on Tier 2/3 data would silently zero-fill missing
         # V1-V28 and produce a meaningless result. Measured tradeoff (see
         # drift_detector.py): Tier 1's legit-outlier rate is low enough
-        # (4.5%) that this caveat is a rare, meaningful signal, unlike the
-        # other 3 domains where the same check fires on 10-51% of
-        # legitimate records and would just be noise -- deliberately not
-        # wired into those. Appends a caveat; never changes the verdict
-        # or parsed risk_level/action fields above.
+        # (4.5%) that this caveat is a rare, meaningful signal here.
+        # Every other domain's own DriftDetector was measured the same way
+        # and found too noisy to wire into a live caveat -- Payroll 10.4%,
+        # Financial Services 13.9%/12.0% (Tier 1/2), HR 43.2%, Insurance
+        # 51.1% (see each domain's tests/test_<domain>_drift_detector.py)
+        # -- so this stays Banking-only, not an oversight. Appends a
+        # caveat; never changes the verdict or parsed risk_level/action
+        # fields above.
         if tier == "tier1" and self.drift_detector.is_outlier(transaction):
             result += (
                 "\nCaveat: this transaction also looks statistically unusual relative to the "

@@ -16,6 +16,7 @@
 # see FintechDetectorAgent.build_prompt()'s tier3 branch, which renders
 # every field a record actually has into the prompt.
 
+from core.rag.prompt_safety import UNTRUSTED_CONTEXT_NOTICE
 import json
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -113,6 +114,8 @@ transaction, a counterparty that appears with two different amounts for
 the same timestamp, or an internally contradictory total.
 All amounts are in USD. Always use the $ symbol. Never use another
 currency symbol.
+
+{UNTRUSTED_CONTEXT_NOTICE}
 
 Context:
 {context}

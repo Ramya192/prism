@@ -124,15 +124,6 @@ EXTRACTION_QUERY = (
 
 HANDBOOK_QUERY = "What is this document and what are its key sections or policies?"
 
-# The classification prompt _looks_like_payslip() sends to the raw LLM
-# (not self.reasoning.reason(), which would force-fit the payslip
-# Pydantic schema onto whatever it's given -- exactly the mechanism that
-# caused the real bug below). Kept as a plain yes/no-style question, not
-# structured output, on purpose.
-PAYSLIP_CLASSIFICATION_SAMPLE_QUERY = (
-    "gross pay, net pay, pay period, hours worked, deductions from this paycheck"
-)
-
 
 class PayrollHrPipeline(UnifiedDomainPipeline):
     """The domain's actual pipeline (configs/payroll_hr.yaml points here,
@@ -152,15 +143,23 @@ class PayrollHrPipeline(UnifiedDomainPipeline):
     would then honestly (and wrongly) turn into a real FRAUD verdict on a
     document that was never a payslip to begin with.
 
-    _looks_like_payslip() below is the actual guard: a cheap content
-    classification BEFORE the payslip extraction query ever runs, so a
-    non-payslip document never reaches a prompt that pressures the LLM
-    into inventing payslip-shaped numbers. This is the document-upload
+    The actual guard is core/unified_pipeline.py's document-type gate
+    (DOCUMENT_TYPE_DESCRIPTION below): a cheap content classification
+    BEFORE the payslip extraction query ever runs, so a non-payslip
+    document never reaches a prompt that pressures the LLM into inventing
+    payslip-shaped numbers. This domain's handbook bug is where the gate
+    came from; every domain now shares it. It is the document-upload
     version of the same "content decides, not file type or a hint"
     principle _select_detector() above already applies to CSV/manual-
     entry records."""
 
     EXTRACTION_QUERY = EXTRACTION_QUERY
+    DOCUMENT_TYPE_DESCRIPTION = (
+        "an individual employee's PAYSLIP or PAY STUB -- a specific pay period's stated "
+        "gross pay, deductions, and net pay for one named employee"
+    )
+    NON_MATCH_EXAMPLES = "a general HR policy document, employee handbook, benefits guide, or job posting"
+    NON_MATCH_QUERY = HANDBOOK_QUERY
     # Opt-in (see core/unified_pipeline.py's REFERENCE_SOURCE docstring) --
     # set here, not inherited as a default, because Payroll & HR has
     # actually run domains/payroll_hr/data/ingest_reference_corpus.py
@@ -176,47 +175,6 @@ class PayrollHrPipeline(UnifiedDomainPipeline):
         self.reasoning = ReasoningAgent()
         self.validator = ValidatorAgent()
         self.evaluator = get_evaluator()  # RAG-quality eval on document_qa/payroll_audit answers -- core/rag/base_rag_evaluator.py
-
-    def _looks_like_payslip(self, result: dict) -> bool:
-        """Cheap content classification, run BEFORE EXTRACTION_QUERY --
-        see the class docstring for the real bug this exists to prevent.
-        Uses the raw LLM directly (self.reasoning.llm), not
-        self.reasoning.reason(), specifically to avoid forcing the
-        payslip-shaped ReasoningOutput schema onto a document this is
-        trying to determine ISN'T a payslip in the first place."""
-        sample_chunks = self.retriever.retrieve(
-            PAYSLIP_CLASSIFICATION_SAMPLE_QUERY, source_document=result["document"], k=5,
-        )
-        if not sample_chunks:
-            return False
-        sample_text = "\n\n".join(c["text"] for c in sample_chunks)[:3000]
-        prompt = (
-            "Does the following document excerpt come from an individual employee's "
-            "PAYSLIP or PAY STUB -- a specific pay period's stated gross pay, "
-            "deductions, and net pay for one named employee? Or is it something "
-            "else entirely, such as a general HR policy document, employee "
-            "handbook, benefits guide, or job posting?\n\n"
-            f"Excerpt:\n{sample_text}\n\n"
-            "Answer with exactly one word: PAYSLIP or OTHER."
-        )
-        response = self.reasoning.llm.invoke(prompt).content.strip().upper()
-        return response.startswith("PAYSLIP")
-
-    def _extract_document(self, result: dict) -> tuple[str, str | None, list[dict]]:
-        """Gates the base class's payslip extraction on _looks_like_payslip()
-        first. A non-payslip document never reaches EXTRACTION_QUERY at
-        all -- instead it gets a plain-text summary (no forced schema, no
-        fraud-shaped fields to hallucinate) and an empty record list, so
-        fraud_verdicts is honestly [] rather than a fabricated verdict."""
-        if not self._looks_like_payslip(result):
-            chunks = self.retriever.retrieve(HANDBOOK_QUERY, source_document=result["document"])
-            context = "\n\n".join(c["text"] for c in chunks[:5])
-            summary = self.reasoning.llm.invoke(
-                f"Based only on the excerpts below, answer in 2-3 sentences: "
-                f"{HANDBOOK_QUERY}\n\nExcerpts:\n{context}"
-            ).content.strip()
-            return HANDBOOK_QUERY, summary, []
-        return super()._extract_document(result)
 
     def score_record(self, record: dict, context: str | None = None) -> dict:
         """Delegates to the EXISTING PayrollHrFraudPipeline, unchanged --

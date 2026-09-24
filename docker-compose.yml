@@ -17,6 +17,11 @@ services:
       - ./vector_store:/app/vector_store    # ChromaDB persists across restarts
       - ./domains/banking/documents/data:/app/domains/banking/documents/data   # statement PDFs
       - ./domains/banking/fraud/data:/app/domains/banking/fraud/data           # transaction CSVs
+      - ./domains/insurance/data:/app/domains/insurance/data                   # claim PDFs + train/holdout CSVs
+      - ./domains/financial_services/data:/app/domains/financial_services/data # wallet statements + train/holdout CSVs
+      - ./domains/payroll_hr/data:/app/domains/payroll_hr/data                 # HR handbook reference corpus source
+      - ./domains/payroll_hr/hr/data:/app/domains/payroll_hr/hr/data           # train/holdout CSVs
+      - ./domains/payroll_hr/payroll/data:/app/domains/payroll_hr/payroll/data # payslip PDFs + train/holdout CSVs
     extra_hosts:
       - "host.docker.internal:host-gateway"   # lets the container reach host Ollama
     restart: unless-stopped

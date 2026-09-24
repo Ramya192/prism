@@ -29,6 +29,39 @@ the full provisioning runbook).
 
 ---
 
+## Status
+
+All four domains — `banking`, `insurance`, `payroll_hr`, `financial_services` — are
+working end to end on one shared `UnifiedDomainPipeline`: every upload gets a
+fraud verdict and a chat-ready ingestion, each domain has a curated reference
+corpus grounding its chat, and each ships a regenerable eval harness.
+
+| | |
+|---|---|
+| Domains | 4 (banking, insurance, payroll_hr, financial_services) |
+| ML tiers | 9 fraud tiers across the 4 domains (HR is single-tier by design) |
+| Committed model artifacts | 15 joblib files, ~30 MB (`models/`) — a fresh clone needs no training data |
+| Tests | 266 (95 offline tests run in CI; the rest need API keys and/or the train CSVs) |
+| Eval | Deterministic-layer F1 per tier against a temporal holdout — see [Evaluation](#evaluation) |
+
+**Known limitations** (deliberate, not oversights):
+
+- **No authentication** on the public demo — only cost guards (rate limits,
+  daily upload/chat/scoring budgets, optional access code).
+- **CSV scoring ceiling** of 2,000 rows per upload (`PRISM_MAX_CSV_ROWS`), and a
+  rolling daily scored-rows budget across all visitors; the UI says when either applies.
+- **Drift detection** is built for every domain but wired into live verdicts only
+  for Banking; the others measured too noisy (see *What the UI does*).
+- **HR** is single-tier (Tier 1 + LLM); no second dataset was found that met the bar.
+- **Banking Tier 1** F1 is low (0.234) because fraud is 0.13% of the holdout: recall
+  is 0.76 but precision is 0.14 — borderline rows escape to the LLM tier by design.
+- **No graph-based fraud-ring detection** (GNN) — most datasets lack the linking
+  identifier it needs.
+- **Financial Services documents** never carry the account/backend-level fields its
+  ML tiers need, so document-sourced records resolve to the LLM tier.
+
+---
+
 ## Architecture
 
 ```
@@ -87,7 +120,7 @@ upload gets a fraud verdict and RAG chat regardless of file type.
 | Domain | Fraud detection | Document chat |
 |---|---|---|
 | `banking` | Hybrid rules → tiered ML (Tier 1 anonymized PCA schema, Tier 2 real-world-shaped schema) → LLM card/bank-transaction fraud, plus an analyst/router/alert chain and an Isolation Forest drift signal. | Bank statement PDF/DOCX → per-transaction extraction → same fraud engine. RAG grounded in a Regulation E (12 CFR 1005) excerpt. |
-| `insurance` | HealthcareDetectorAgent, rules → tiered ML (AUC 0.998 / 0.857, Tier 1 / Tier 2) → LLM claim fraud. | Claim/EOB PDF/DOCX → structured field extraction → same engine. RAG grounded in a CMS Claims Processing Manual (Ch. 26) excerpt. |
+| `insurance` | Claim-level fraud (`HealthcareDetectorAgent`): rules → tiered ML (LightGBM Tier 1 / real-world-shaped Tier 2; vetting AUC 0.998 / 0.857 on random splits, temporal-holdout F1s under Evaluation) → LLM claim fraud. | Claim/EOB PDF/DOCX → structured field extraction → same engine. RAG grounded in a CMS Claims Processing Manual (Ch. 26) excerpt. |
 | `payroll_hr` | Content-routed between payroll-register fraud (tiered rules → ML → LLM) and job-posting fraud (rules → ML → LLM) — one domain, two fraud shapes, plus HDBSCAN fraud-pattern clustering. | Payslip PDF/DOCX → line-item extraction → same engine; a content-classification gate keeps non-payslip documents (e.g. handbooks) from being force-fit into a fabricated payslip record. RAG grounded in an IRS Publication 15-T excerpt. |
 | `financial_services` | FintechDetectorAgent, rules → tiered ML (Tier 1 blockchain-scam schema, Tier 2 exchange/DEX manipulation schema) → LLM. | Wallet/exchange statement PDF/DOCX → per-transaction extraction; every ML tier's required fields are account/backend-level and never derivable from a document, so document-sourced records honestly resolve to LLM-fallback reasoning — still real value over no document capability at all. RAG grounded in a FinCEN CVC guidance (FIN-2019-G001) excerpt. |
 
@@ -122,9 +155,35 @@ change.
 - **CSV-header schema sniffing** — a raw CSV column dump (no prose) is
   matched against each domain's known Tier 1/Tier 2 schemas directly, so
   classification doesn't depend on keyword text being present.
-- **Drift/outlier signal (banking)** — an Isolation Forest companion to
-  the supervised Tier 1 classifier surfaces "does this look like anything
-  in the training distribution" as a caveat alongside the fraud verdict.
+- **Drift/outlier signal** — an Isolation Forest companion to the
+  supervised classifiers asks "does this look like anything in the training
+  distribution". It is built for all 4 domains, but only Banking's is wired
+  into live verdicts (4.5% legit-outlier rate); the others measured too noisy
+  (Payroll 10%, Financial Services 12–14%, HR 43%, Insurance 51%), so they
+  ship measured but unwired. See `tests/test_*_drift_detector.py`.
+- **Duplicate-upload guard** — a content hash stored in the vector store
+  rejects a repeat of an already-ingested document, within a batch and
+  across batches. It is scoped to the uploading browser session, and each
+  session's documents are stored under their own namespace, so on the shared
+  public store one visitor can neither overwrite, block, nor see another's.
+- **Upload hardening** — scanned/empty files get a clear message instead of a
+  traceback; a CSV past the 2,000-row scoring ceiling says so; rows are
+  scored on a small thread pool; uploads are capped at 15 MB.
+- **Document-type gate** — every domain checks a PDF/DOCX is actually the kind
+  of document its extraction query assumes (payslip, claim, bank/wallet
+  statement) before extracting; a wrong-type document degrades to chat-only
+  with an honest empty verdict instead of a fabricated record.
+- **Cost guards for the public site** — per-session hourly limits and daily
+  budgets on uploads, chat, and manual scoring, plus an optional
+  `PRISM_ACCESS_CODE` gate (`ui/guard.py`). Because one upload can fan out
+  into thousands of LLM calls, scored rows also draw from a rolling daily
+  budget (`core/usage_budget.py`, `PRISM_DAILY_SCORED_ROWS_BUDGET`, default
+  5,000); past it a document is still ingested and chattable but not
+  scored, and the UI says so. It is a cost guard, not authentication; also
+  set a spend cap in the OpenAI dashboard.
+- **Conversational chat** — multi-turn history, seeded with the fraud
+  verdict so a first follow-up like "why was this flagged?" already has it in
+  context.
 - **Fraud-pattern clustering (payroll)** — HDBSCAN clustering over the
   payroll anomaly space, validated against 3 injected synthetic fraud
   patterns.
@@ -148,16 +207,23 @@ deterministic-layer numbers.
 | Domain / tier | Holdout size | Base rate | Deterministic-layer F1 |
 |---|---|---|---|
 | Banking Tier 1 | 85,443 | 0.13% | 0.234 |
+| Banking Tier 2 | 3,000 | 29.07% | 0.518 |
 | Insurance Tier 1 | 2,697 | 8.71% | 0.954 |
-| Insurance Tier 2 | 6,030 | 25.01% | — (see `EVAL_RESULTS.md`) |
+| Insurance Tier 2 | 6,030 | 25.01% | 0.795 |
 | Payroll Tier 1 | 44,021 | 50.11% | 0.993 |
+| Payroll Tier 2 | 541 | 50.46% | 0.966 |
 | HR (single tier) | 5,364 | 4.77% | 0.774 |
 | Financial Services Tier 1 | 4,000 | 7.25% | 0.493 |
+| Financial Services Tier 2 | 100,000 | 5.95% | 0.470 |
 
-Full breakdowns (precision/recall/confusion matrix per layer, plus what
-escapes to the LLM tier and why) are regenerated by running each
-domain's `eval_harness.py` as a module — see `EVAL_RESULTS.md` in each
-domain folder.
+These are the free deterministic layers only. Low F1 on the rare-fraud tiers
+(Banking Tier 1 at 0.13%, Financial Services) is mostly a precision effect —
+recall stays high (0.76–0.98) at a tiny base rate — and the borderline rows
+escape to the LLM tier rather than being forced into a verdict. Full
+breakdowns (precision/recall/confusion matrix per layer, plus what escapes to
+the LLM tier and why) are regenerated by running each
+domain's `eval_harness.py` as a module, which writes an `EVAL_RESULTS.md`
+next to it (git-ignored, since it is regenerable; needs the train/holdout CSVs).
 
 RAG quality is separately evaluated via `core/rag/base_rag_evaluator.py`
 (custom cosine/LLM-judge locally, RAGAS in production) — one thin
@@ -182,12 +248,19 @@ prism/
 │   ├── insurance/                # agents/, evaluation/, pipeline.py
 │   ├── payroll_hr/               # payroll/ + hr/, one pipeline.py
 │   └── financial_services/       # agents/, evaluation/, pipeline.py
+├── ui/                          # Streamlit UI package (landing, batch upload, shared
+│   │                            #   chat/workspace widgets, one screen per domain)
+│   └── domains/
 ├── data/                        # curated sample documents per domain, for demoing
-├── streamlit_app.py             # single UI — classify, confirm, workspace, batch upload
+├── docs/                        # UNIFIED_INGESTION_VISION.md, DATA_CONVENTIONS.md
+├── streamlit_app.py             # entry point — page setup + step routing only
 ├── main.py                      # CLI smoke test across all 4 domains
-├── tests/                       # 192 tests
-├── deploy/                      # AWS EC2 provisioning runbook
-├── Dockerfile / docker-compose.yml
+├── tests/                       # 266 tests
+├── models/                      # committed joblib artifacts for every ML scorer / drift
+│                                #   detector (core/model_store.py) — loaded at startup, no train CSV needed
+├── deploy/                      # AWS EC2 provisioning runbook + user-data
+├── .github/workflows/ci.yml     # offline tests + Docker build on every push/PR
+├── Dockerfile / docker-compose.yml   # python:3.13-slim, single service
 └── requirements.txt
 ```
 
@@ -200,6 +273,7 @@ prism/
 ```bash
 git clone <this repo>
 cd prism
+# Python 3.13 (matches the Dockerfile)
 pip install -r requirements.txt
 cp .env.example .env   # fill in OPENAI_API_KEY at minimum
 ```
@@ -249,17 +323,63 @@ and the LLM tiebreak plus your confirm step settle it.
 docker compose up --build
 ```
 
-Single containerized service on [http://localhost:8501](http://localhost:8501). ChromaDB persists via a mounted volume. For document chat's default `LLM_PROVIDER=ollama`, a running Ollama on the host with `llama3.1:8b` pulled is required — the container reaches it via `host.docker.internal`.
+Single containerized service on [http://localhost:8501](http://localhost:8501). ChromaDB persists via the mounted `vector_store/` volume, and every domain's `data/` dir is mounted so ML scorers and sample files aren't stale build-time copies. For document chat's default `LLM_PROVIDER=ollama`, a running Ollama on the host with `llama3.1:8b` pulled is required — the container reaches it via `host.docker.internal`.
 
-### 5. Tests
+**First run only — ingest the reference corpora.** The vector store starts
+empty, so chat has no policy grounding until you run, once per fresh store:
+
+```bash
+python -m domains.banking.documents.data.ingest_reference_corpus
+python -m domains.insurance.data.ingest_reference_corpus
+python -m domains.payroll_hr.data.ingest_reference_corpus
+python -m domains.financial_services.data.ingest_reference_corpus
+```
+
+(In Docker: `docker compose exec prism python -m ...`.) Each is idempotent.
+
+### 5. Trained models
+
+Every ML scorer and drift detector loads a committed artifact from
+`models/` at startup (`core/model_store.py`), so a fresh clone — the EC2
+box, CI — has working ML tiers without the ~700 MB of gitignored train
+CSVs. An artifact is used only if it was built with the same
+scikit-learn / LightGBM / XGBoost versions (pinned in `requirements.txt`)
+and the train CSV, if present, still matches its hash. After changing the
+data, model code, or those pins, regenerate them all. (Every model,
+banking's Tier 1 scorer and drift detector included, is built from its
+domain's full train set — the same one the Evaluation numbers below use.)
+
+```bash
+python -m core.model_store --rebuild    # needs the train CSVs (each domain's prepare_data.py)
+```
+
+### 6. Tests
 
 ```bash
 pytest tests/ -v
 ```
 
-`tests/test_config_loader.py` needs no API key. Most other suites need
-`OPENAI_API_KEY`; document-chat suites also need `COHERE_API_KEY` (the
-reranker) and, for the default local provider, a running Ollama.
+CI (`.github/workflows/ci.yml`) runs the offline, key-free, data-free
+suites on every push: config loading, model artifacts, startup wiring,
+upload hardening, duplicate guard, rate limiter, conversational RAG. The
+rest need `OPENAI_API_KEY`; document-chat suites also need
+`COHERE_API_KEY` (the reranker) and, for the default local provider, a
+running Ollama; the drift/eval suites need the train/holdout CSVs.
+
+---
+
+## Security notes
+
+- **Prompt injection.** Uploaded documents are untrusted text that reaches
+  the LLM. Every reasoning prompt tells the model to treat retrieved context
+  as data, not instructions (`core/rag/prompt_safety.py`), and the type gate
+  does the same — but that is a mitigation, not a guarantee. The structural
+  defences are that the rules/ML tiers score *extracted fields* rather than a
+  document's own claims, extraction output is schema-validated, and chat
+  output is only ever rendered as text.
+- **No authentication.** The public demo is open; see the cost guards above.
+- **Model artifacts are pickles** and are loaded only from this repo's own
+  `models/` directory, never from user input.
 
 ---
 

@@ -30,6 +30,8 @@
 # rule_based_filter()'s USD-labeled thresholds agree on currency.
 
 import pandas as pd
+
+from core.model_store import load_or_train
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 
@@ -57,7 +59,7 @@ class GeneralizableScorer:
         self.scaler = StandardScaler()
         self.encoders = {c: LabelEncoder() for c in self.CATEGORICAL_COLS}
         self.trained = False
-        self._train(data_path)
+        load_or_train(self, data_path)
 
     def _train(self, data_path):
         try:

@@ -1,6 +1,6 @@
 """
 tests/test_conversational_rag.py
-Tests for the conversation-history threading added to bfsi_documents' and
+Tests for the conversation-history threading added to banking documents' and
 payroll's ReasoningAgent, and the shared seed_history builder that turns
 an auto-scan verdict into the first conversation turn. All pure string/
 dict construction -- no real LLM call happens in any of these (a dummy
@@ -60,8 +60,8 @@ class TestBuildSeedHistory:
         assert "No anomalies found" in seed[1]["text"]
         assert "⚠" not in seed[1]["text"]
 
-    def test_bfsi_documents_field_names_also_supported(self):
-        """bfsi_documents uses anomaly_flag/anomaly_reason instead of
+    def test_banking_documents_field_names_also_supported(self):
+        """banking documents uses anomaly_flag/anomaly_reason instead of
         flag/flag_reason -- the shared builder must handle both."""
         scan = {"status": "valid", "data": {"answer": "3 transactions found.", "anomaly_flag": True, "anomaly_reason": "duplicate charge"}}
         seed = build_seed_history("scan for anomalies", scan)

@@ -9,6 +9,7 @@
 # already defaults missing optional columns to 0 (see its .get(col, 0)
 # pattern), an accepted approximation, not a new one introduced here.
 
+from core.rag.prompt_safety import UNTRUSTED_CONTEXT_NOTICE
 import json
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -36,7 +37,7 @@ class ExtractedClaim(BaseModel):
 class ReasoningAgent:
     def __init__(self):
         # temperature=0 -- structured extraction, not creative generation.
-        # Same root-cause fix as payroll's/bfsi_documents' reasoning
+        # Same root-cause fix as payroll's/banking documents' reasoning
         # agents (see their docstrings for the real reconciliation-flake
         # this fixed there).
         if Settings.LLM_PROVIDER == "ollama":
@@ -108,6 +109,8 @@ claim date before the service date, or a diagnosis/procedure code
 referenced that isn't defined anywhere in the document.
 All amounts are in USD. Always use the $ symbol. Never use ₹ or any other
 currency symbol.
+
+{UNTRUSTED_CONTEXT_NOTICE}
 
 Context:
 {context}

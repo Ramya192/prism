@@ -2,7 +2,7 @@
 tests/test_payroll_detector.py
 Tests for PayrollDetectorAgent — the CSV payroll-register rules->tiered
 ML->LLM detector, mirroring test_fraud_pipeline.py's structure for
-bfsi_fraud. See payroll_detector_agent.py's module docstring for what
+banking fraud. See payroll_detector_agent.py's module docstring for what
 Tier 1/2/3 mean here.
 
 A dummy OPENAI_API_KEY (any string) is enough for all of these: the agent

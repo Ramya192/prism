@@ -2,7 +2,7 @@
 # BankingPipeline -- unifies domains/banking/fraud (FraudPipeline --
 # rules -> tiered ML -> LLM, plus the analyst/router/alert chain, plus
 # the Isolation Forest companion signal) and domains/banking/documents
-# (DocumentPipeline's RAG agents, RAGAS-evaluated) into ONE pipeline on
+# (the document RAG agents, RAGAS-evaluated) into ONE pipeline on
 # core/unified_pipeline.py's UnifiedDomainPipeline. Any upload (CSV, PDF,
 # or DOCX) always gets both a fraud verdict and a chat-ready ingestion.
 #
@@ -84,6 +84,11 @@ DOCUMENT_CONTEXT = (
 class BankingPipeline(UnifiedDomainPipeline):
     EXTRACTION_QUERY = EXTRACTION_QUERY
     DOCUMENT_SCORING_CONTEXT = DOCUMENT_CONTEXT
+    DOCUMENT_TYPE_DESCRIPTION = (
+        "a bank account statement -- a dated list of one account's transactions "
+        "(deposits, withdrawals, payments)"
+    )
+    NON_MATCH_EXAMPLES = "a loan agreement, a terms-and-conditions or policy document, a brochure, or a single receipt"
     # Opt-in (see core/unified_pipeline.py's REFERENCE_SOURCE docstring) --
     # set here, not inherited as a default, because Banking has actually
     # run domains/banking/data/ingest_reference_corpus.py against its

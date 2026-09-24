@@ -10,3 +10,8 @@ primaryColor = "#2f5fdb"
 backgroundColor = "#ffffff"
 secondaryBackgroundColor = "#f6f7f9"
 textColor = "#191d24"
+
+# The public box is a 1GB t3.micro: a 200MB (Streamlit's default) CSV upload
+# read into pandas would OOM it. 15MB covers every sample/statement file.
+[server]
+maxUploadSize = 15

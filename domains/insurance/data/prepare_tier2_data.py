@@ -9,7 +9,7 @@
 # label, 24.9% fraud rate, no missing values). Verified learnable before
 # adopting: AUC 0.857, F1 0.667 on a random holdout, signal spread across
 # 5+ features (no single dominant giveaway) -- comparable caliber to
-# bfsi_fraud's own Tier 2.
+# banking fraud's own Tier 2.
 #
 # HONEST CAVEAT, kept rather than hidden: this dataset's Claim_Amount
 # range ($5,517-$2,499,689, mean ~$1.24M) is unrealistic for individual
@@ -18,7 +18,7 @@
 # issue (both datasets are already USD -- Patient_State/Provider_State
 # are US state codes in both, no conversion needed, see
 # docs/DATA_CONVENTIONS.md) -- it's simply an implausible numeric range
-# in this synthetic generator, similar in spirit to bfsi_fraud Tier 2's
+# in this synthetic generator, similar in spirit to banking fraud Tier 2's
 # unrealistically high 28% fraud base rate (mdtalhask). Two candidate
 # datasets were searched and rejected before falling back to this one:
 # a re-upload of the already-rejected provider-level Medicare dataset,

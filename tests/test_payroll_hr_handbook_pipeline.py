@@ -14,8 +14,8 @@ LLM didn't return nulls -- it fabricated a plausible-looking
 GROSS/Deduction/Net_Pay record with dollar figures that appear NOWHERE in
 the real handbook text (verified directly against the source), which got
 scored as a genuine FRAUD verdict on a document that was never a payslip.
-The real fix -- PayrollHrPipeline._looks_like_payslip()/_extract_document()
-(see pipeline.py's class docstring) -- gates the payslip extraction query
+The real fix -- UnifiedDomainPipeline's document-type gate
+(core/unified_pipeline.py; PayrollHrPipeline.DOCUMENT_TYPE_DESCRIPTION) -- gates the payslip extraction query
 on a cheap content classification BEFORE it ever runs, so a non-payslip
 document never reaches a prompt that pressures the LLM into inventing
 payslip-shaped numbers at all. This suite verifies THAT fix, not the base
@@ -38,6 +38,8 @@ import pytest
 
 from core.orchestrator import AgentOrchestrator
 from domains.payroll_hr.pipeline import HANDBOOK_QUERY
+
+pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("reference_corpora")]
 
 HANDBOOK = Path("domains/payroll_hr/data/handbooks/SHRM_Sample_Employee_Handbook_2023.docx")
 
@@ -70,7 +72,7 @@ class TestHandbookIngest:
         a plausible-looking GROSS/Deduction/Net_Pay record with dollar
         figures that appear NOWHERE in the real handbook text, and that
         got scored as a real FRAUD verdict. The actual fix
-        (PayrollHrPipeline._looks_like_payslip(), gating
+        (UnifiedDomainPipeline's document-type gate, run by
         _extract_document() before EXTRACTION_QUERY ever runs) is what
         this test verifies -- not the base class's generic empty-list
         behavior, which this document type proved insufficient on its

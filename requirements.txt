@@ -21,17 +21,25 @@ streamlit==1.55.0
 # Config
 pyyaml
 
-# Data / ML — bfsi_fraud, payroll, healthcare, hr_compliance
+# Data / ML — all 4 domains' scorers and drift detectors
+# scikit-learn / lightgbm / xgboost are pinned EXACTLY: models/*.joblib
+# (core/model_store.py) are only loaded if built with these same versions;
+# bump them together with `python -m core.model_store --rebuild`.
 pandas==2.3.3
-scikit-learn>=1.6.0
-# healthcare Tier1's ClaimFraudScorer (LightGBM) and hr_compliance Tier1's
+joblib
+scikit-learn==1.8.0
+# insurance Tier1's ClaimFraudScorer (LightGBM) and payroll_hr HR Tier1's
 # PostingFraudScorer (XGBoost) -- swapped from RandomForest after a
 # measured benchmark across all 7 scorer/tier combos showed a real F1
-# gain on these two specifically (healthcare 0.869->0.932, hr_compliance
+# gain on these two specifically (insurance 0.869->0.932, payroll_hr HR
 # 0.666->0.716); the other 5 scorers stayed on RandomForest since neither
 # alternative showed a clear win there.
-lightgbm
-xgboost
+lightgbm==4.7.0
+# The Linux xgboost wheel drags in nvidia-nccl (hundreds of MB of GPU libs an
+# 8GB t3.micro disk can't spare); xgboost-cpu is the same package, CPU-only,
+# and installs the same `xgboost` module at the same version.
+xgboost==3.4.1; sys_platform != "linux"
+xgboost-cpu==3.4.1; sys_platform == "linux"
 
 # Documents / RAG — any-format ingestion (PDF/CSV/DOCX), all domains
 pdfplumber
@@ -49,7 +57,7 @@ datasets
 # drags in the full CUDA-enabled PyTorch stack (2.6+ GB of nvidia-*
 # wheels) for code that will never execute in that environment.
 
-# Test-data generation (bfsi_documents demo statements)
+# Test-data generation (banking demo statements)
 reportlab
 fpdf2
 

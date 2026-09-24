@@ -14,7 +14,7 @@ from domains.banking.fraud.agents.alert_agent import AlertAgent
 from domains.banking.fraud.agents.routing_agent import RoutingAgent
 from domains.banking.fraud.tools.image_input import ImageInputTool
 
-DEFAULT_DEMO_CSV = "domains/banking/fraud/data/transactions_balanced.csv"
+DEFAULT_DEMO_CSV = "domains/banking/fraud/data/train.csv"
 
 
 class FraudPipeline:

@@ -2,6 +2,7 @@
 # Ported from document_intelligence_system/agents/reasoning_agent.py —
 # logic unchanged, import paths moved under domains.banking.documents.
 
+from core.rag.prompt_safety import UNTRUSTED_CONTEXT_NOTICE
 import json
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -34,7 +35,7 @@ class ReasoningAgent:
         # (Ollama's default is ~0.8), which let a real payroll-domain
         # reconciliation test flake -- a correct payslip's LLM extraction
         # non-deterministically dropped a line item and tripped a false
-        # mismatch. Fixed here too even though bfsi_documents' own test
+        # mismatch. Fixed here too even though banking documents' own test
         # suite didn't happen to catch it, since it's the same root cause.
         if Settings.LLM_PROVIDER == "ollama":
             from langchain_ollama import ChatOllama
@@ -103,6 +104,8 @@ do not contradict a flag/reason already stated unless the context clearly
 shows it was wrong.
 Flag anomalies ONLY if you detect genuinely suspicious patterns such as: unknown merchants, duplicate transactions, unusually large amounts compared to the rest, late-night ATM withdrawals, or rapid successive transactions. Do NOT flag normal retail purchases (grocery, food delivery, online shopping) as anomalies purely based on amount size.
 All amounts are in USD. Always use the $ symbol. Never use ₹ or any other currency symbol.
+
+{UNTRUSTED_CONTEXT_NOTICE}
 
 Context:
 {context}

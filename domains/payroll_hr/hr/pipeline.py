@@ -1,13 +1,13 @@
 # domains/payroll_hr/hr/pipeline.py
 # HrCompliancePipeline — the AgentOrchestrator-facing adapter for this
 # domain's fraud-detection capability (job-posting screening), same
-# thin-wrapper shape as bfsi_fraud's FraudPipeline. Wraps
+# thin-wrapper shape as banking fraud's FraudPipeline. Wraps
 # HrDetectorAgent's rules -> ML -> LLM posting analysis.
 #
 # This domain's second, planned capability (policy-document RAG over
 # employee handbooks) has no pipeline yet -- when it's built, this file
 # is the place a document_qa-style capability would be added, the same
-# way payroll's PayrollPipeline (RAG) and PayrollDetectorAgent (CSV
+# way payroll's document-RAG pipeline and PayrollDetectorAgent (CSV
 # fraud) are two separate things sharing one domain id.
 
 from __future__ import annotations

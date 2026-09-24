@@ -3,7 +3,7 @@ domains/banking/documents/tools/generate_statement.py
 Ported from document_intelligence_system/tools/generate_statement.py —
 logic unchanged, paths updated to this domain's own data/ folder. This is
 also where the credit/debit classification fix lives (see clean_transactions()
-below) — configs/bfsi_documents.yaml's to-do note points here.
+below) — configs/banking.yaml's to-do note points here.
 
 Reads Kaggle bank transaction CSV and generates realistic
 bank statement PDFs — one per account (full year).
@@ -529,7 +529,7 @@ def generate_pdf(
     )
     elements.append(
         Paragraph(
-            "Prism — Domain-Agnostic Multi-Agent Intelligence Platform · bfsi_documents domain",
+            "Prism — Domain-Agnostic Multi-Agent Intelligence Platform · banking domain",
             footer_style,
         )
     )
@@ -538,7 +538,7 @@ def generate_pdf(
 
 def main():
     print("=" * 60)
-    print("Prism (bfsi_documents) — Bank Statement Generator")
+    print("Prism (banking documents) — Bank Statement Generator")
     print("Multi-bank: JPMorgan Chase / Bank of America /")
     print("            Wells Fargo / Citibank / Goldman Sachs")
     print("=" * 60)

@@ -1,5 +1,5 @@
 # domains/insurance/agents/healthcare_detector_agent.py
-# HealthcareDetectorAgent — the claim-level counterpart to bfsi_fraud's
+# HealthcareDetectorAgent — the claim-level counterpart to banking fraud's
 # FraudDetectorAgent and payroll's PayrollDetectorAgent, same rules ->
 # tiered ML -> LLM shape.
 #
@@ -8,7 +8,7 @@
 # Policy_Number/Provider_Patient_Distance_Miles schema — see
 # data/prepare_tier2_data.py's module docstring for the search story and
 # its honest unrealistic-amount-scale caveat) are two genuinely different,
-# independently-trained real datasets, same reasoning as bfsi_fraud/
+# independently-trained real datasets, same reasoning as banking/fraud/
 # payroll's tiering.
 #
 #   Tier 1 — rules: approved amount exceeding claimed, or negative

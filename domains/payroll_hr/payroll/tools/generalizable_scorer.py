@@ -14,6 +14,8 @@
 # row, which is exactly the kind of pattern only a trained model can see.
 
 import pandas as pd
+
+from core.model_store import load_or_train
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 
@@ -39,7 +41,7 @@ class PayrollGeneralizableScorer:
         self.model = None
         self.scaler = StandardScaler()
         self.trained = False
-        self._train(data_path)
+        load_or_train(self, data_path)
 
     def _train(self, data_path):
         try:

@@ -16,6 +16,8 @@ import pytest
 
 from core.orchestrator import AgentOrchestrator
 
+pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("reference_corpora")]
+
 CLM001 = Path("domains/insurance/data/statements/CLM001_claim.pdf")   # clean
 CLM003 = Path("domains/insurance/data/statements/CLM003_claim.pdf")   # approved > billed
 

@@ -9,7 +9,7 @@
 # analysis (transaction dict in, verdict out) and document RAG (PDF in,
 # ingest + query) are genuinely different shapes of work. Every domain
 # Pipeline exposes at least `.run(**kwargs) -> dict`; it's free to expose
-# extra methods (e.g. DocumentPipeline.ingest(...)) that callers reach via
+# extra methods (e.g. UnifiedDomainPipeline.ingest(...)) that callers reach via
 # the instance this orchestrator hands back.
 
 from __future__ import annotations
@@ -21,8 +21,10 @@ from core.config_loader import ConfigLoader, DomainConfig
 
 
 class DomainNotRunnableError(Exception):
-    """Raised when a domain is known but has no working pipeline (stub
-    configs like hr_compliance.yaml / healthcare.yaml)."""
+    """Raised when a domain is known but has no working pipeline (a
+    config whose `status` is "coming_soon" rather than "working" -- see
+    DomainConfig.is_runnable in core/config_loader.py). Every shipped
+    domain config is "working"; this guards a future stub."""
 
 
 class AgentOrchestrator:

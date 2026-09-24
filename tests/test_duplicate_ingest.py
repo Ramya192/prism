@@ -74,3 +74,23 @@ def test_duplicate_is_rejected_before_anything_is_stored(loader, tmp_path):
     with pytest.raises(DuplicateDocumentError):
         pipeline.ingest(path, filename="renamed")
     assert loader.collection.count() == before
+
+
+def test_legacy_ownerless_upload_is_invisible_to_owner_check_and_purgeable(loader, tmp_path):
+    from core.rag.purge_legacy_uploads import find_legacy_chunks
+    from core.rag.reference_corpus import REFERENCE_SOURCE_ID
+
+    path = _csv(tmp_path / "old.csv")
+    loader.load(path, filename="old")                       # pre-owner upload: no owner tag
+    loader.load(path, filename="mine", owner="abc12345")    # a visitor's own upload
+    loader.load(path, filename=REFERENCE_SOURCE_ID)         # reference corpus: ownerless by design
+
+    # An owner-scoped check finds only that owner's copy, never the legacy one.
+    assert loader.find_duplicate(path, "abc12345") == "mine@abc12345"
+
+    # Only the legacy upload is a purge candidate.
+    legacy = find_legacy_chunks(loader.collection)
+    assert list(legacy) == ["old"]
+    loader.collection.delete(ids=legacy["old"])
+    assert find_legacy_chunks(loader.collection) == {}
+    assert loader.find_duplicate(path, "abc12345") == "mine@abc12345"

@@ -10,6 +10,8 @@
 # with the scorer class and its training CSV.
 
 import pandas as pd
+
+from core.model_store import load_or_train
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 
@@ -30,7 +32,7 @@ class DriftDetector:
         self.encoders = {c: LabelEncoder() for c in self.scorer_cls.CATEGORICAL_COLS}
         self.model = None
         self.trained = False
-        self._train(data_path or default_path, contamination)
+        load_or_train(self, data_path or default_path, contamination)
 
     def _train(self, data_path, contamination):
         try:

@@ -17,7 +17,7 @@
 # converted, it's a realistic ~$24K/year. Converted here to USD (2020
 # average rate, matching this dataset's publish date: 1 USD = 74.160 INR,
 # per x-rates.com's 2020 average) for consistency with Tier 1's SF Salaries
-# (USD) and bfsi_fraud's own EUR->USD conversion -- same reasoning as
+# (USD) and banking fraud's own EUR->USD conversion -- same reasoning as
 # prepare_data.py's conversion there: keep every dataset in this domain,
 # and its rules layer, agreeing on one currency.
 #

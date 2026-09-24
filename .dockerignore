@@ -1,0 +1,105 @@
+# Version control
+.git/
+.github/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# ChromaDB local storage -- mounted at runtime (see docker-compose.yml), not baked into the image
+vector_store/
+
+# Test cache / test suite -- not needed at runtime
+.pytest_cache/
+.coverage
+htmlcov/
+tests/
+
+# Large/derived per-domain datasets -- mirrors .gitignore's own data exclusions
+# exactly (Docker COPY doesn't consult .gitignore, so without this the build
+# context picks up whatever's on disk). Mounted at runtime instead (see
+# docker-compose.yml's domains/*/data volumes), regenerated locally via each
+# domain's prepare_data.py / prepare_tier2_data.py. Deliberately NOT a blanket
+# domains/*/data/*.csv glob -- that would also strip committed demo CSVs like
+# domains/banking/fraud/data/transactions_balanced.csv (pipeline.py's
+# DEFAULT_DEMO_CSV), which should stay baked into the image as a fallback for
+# a container run without these volumes mounted.
+domains/banking/fraud/data/creditcard.csv
+domains/banking/fraud/data/creditcardfraud.zip
+domains/banking/fraud/data/train.csv
+domains/banking/fraud/data/test_holdout.csv
+domains/banking/fraud/data/tier2_raw/
+domains/banking/fraud/data/tier2_train.csv
+domains/banking/fraud/data/tier2_test_holdout.csv
+domains/payroll_hr/payroll/data/tier_ml_raw/
+domains/payroll_hr/payroll/data/tier_ml_train.csv
+domains/payroll_hr/payroll/data/tier_ml_test_holdout.csv
+domains/payroll_hr/payroll/data/tier2_raw/
+domains/payroll_hr/payroll/data/tier2_train.csv
+domains/payroll_hr/payroll/data/tier2_test_holdout.csv
+domains/insurance/data/raw/
+domains/insurance/data/train.csv
+domains/insurance/data/test_holdout.csv
+domains/insurance/data/tier2_raw/
+domains/insurance/data/tier2_train.csv
+domains/insurance/data/tier2_test_holdout.csv
+domains/payroll_hr/hr/data/raw/
+domains/payroll_hr/hr/data/train.csv
+domains/payroll_hr/hr/data/test_holdout.csv
+domains/financial_services/data/tier1_raw/
+domains/financial_services/data/backup_wallet_raw/
+domains/financial_services/data/train.csv
+domains/financial_services/data/test_holdout.csv
+domains/financial_services/data/tier2_raw/
+domains/financial_services/data/tier2_train.csv
+domains/financial_services/data/tier2_test_holdout.csv
+domains/banking/documents/data/raw/
+domains/banking/documents/data/statements/*.pdf
+!domains/banking/documents/data/statements/AC00003_statement.pdf
+!domains/banking/documents/data/statements/AC00140_statement.pdf
+!domains/banking/documents/data/statements/AC00254_statement.pdf
+!domains/banking/documents/data/statements/AC00360_statement.pdf
+!domains/banking/documents/data/statements/AC00448_statement.pdf
+domains/payroll_hr/data/handbooks/*.docx
+
+# Secrets -- never bake these into an image
+.env
+.env.*
+!.env.example
+!.env.*.example
+.streamlit/secrets.toml
+*.pem
+*.ppk
+*.key
+
+# Editor/IDE
+.vscode/
+.idea/
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Personal scratch / working notes
+scratch_*
+*.scratch.*
+NOTES.md
+TODO.md
+
+# Docs -- not needed by the running app
+docs/

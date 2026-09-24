@@ -1,0 +1,47 @@
+# CI runs the offline, key-free, data-free tests -- the ones that must keep
+# passing on a fresh clone. The suites that call real OpenAI/Cohere (and
+# the ones that need the gitignored train/holdout CSVs) stay a manual,
+# local run: `pytest tests/` with keys in .env.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Offline tests (no API keys, no train CSVs)
+        env:
+          # Present only so constructing an OpenAI client doesn't raise; no request is ever made.
+          OPENAI_API_KEY: sk-ci-placeholder
+          ENV: production
+          LLM_PROVIDER: openai
+          MODEL_NAME: gpt-4o-mini
+          RISK_THRESHOLD: "50000"
+        run: >
+          pytest -q
+          tests/test_config_loader.py
+          tests/test_model_store.py
+          tests/test_upload_robustness.py
+          tests/test_duplicate_ingest.py
+          tests/test_guard.py
+          tests/test_usage_budget.py
+          tests/test_conversational_rag.py
+          tests/test_startup_wiring.py
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Image builds and ships the model artifacts
+        run: |
+          docker build -t prism-ci .
+          docker run --rm prism-ci sh -c 'ls models/*.joblib | wc -l'

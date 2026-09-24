@@ -5,7 +5,10 @@
 # second set of secrets, no second point of failure for a UI that's the
 # only consumer anyway).
 
-FROM python:3.11-slim
+# Pinned to match the version this is actually developed and tested
+# against locally (was 3.11 -- silent drift from local dev, never
+# exercised in CI). Bump this deliberately, together, if local dev moves.
+FROM python:3.13-slim
 
 WORKDIR /app
 
@@ -19,6 +22,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY configs/ ./configs/
 COPY core/ ./core/
 COPY domains/ ./domains/
+COPY ui/ ./ui/
+COPY models/ ./models/
 COPY .streamlit/config.toml ./.streamlit/config.toml
 COPY streamlit_app.py .
 COPY main.py .

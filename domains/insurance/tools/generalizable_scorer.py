@@ -16,10 +16,12 @@
 # roughly 200-1000x larger than Tier 1's real-claim-shaped amounts
 # (~$570 mean) -- not a currency issue (both are already USD), just an
 # implausible numeric range in this synthetic generator. Kept and
-# documented rather than hidden, same treatment as bfsi_fraud Tier 2's
+# documented rather than hidden, same treatment as banking fraud Tier 2's
 # unrealistic 28% base rate.
 
 import pandas as pd
+
+from core.model_store import load_or_train
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 
@@ -49,7 +51,7 @@ class ClaimGeneralizableScorer:
         self.scaler = StandardScaler()
         self.encoders = {c: LabelEncoder() for c in self.CATEGORICAL_COLS}
         self.trained = False
-        self._train(data_path)
+        load_or_train(self, data_path)
 
     def _train(self, data_path):
         try:
