@@ -14,7 +14,7 @@ import streamlit as st
 
 from ui.constants import SAMPLE_FILES
 from ui.guard import allow, describe_ingest_error, get_owner
-from ui.shared import render_pipeline_flow, render_config_panel
+from ui.shared import md_safe, render_pipeline_flow, render_config_panel
 from ui.batch_upload import render_domain_quick_picks, render_batch_upload_section
 
 logger = logging.getLogger(__name__)
@@ -197,7 +197,7 @@ def render_landing(config_loader, orchestrator, classifier) -> None:
                     f"(`{result.best_guess.domain_id}`) — {result.best_guess.score:.0%} match, method: {result.method}"
                 )
                 if result.llm_reasoning:
-                    st.caption(f"LLM tiebreak reasoning: {result.llm_reasoning}")
+                    st.caption(md_safe(f"LLM tiebreak reasoning: {result.llm_reasoning}"))
 
                 with st.expander("All domain scores"):
                     for g in result.all_scores:

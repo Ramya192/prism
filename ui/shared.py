@@ -4,9 +4,12 @@
 # separate drawer implementation (see that function's own docstring).
 # Split out of streamlit_app.py, which had grown to 1483 lines.
 
+import html
 import logging
 import os
+import re
 import tempfile
+from collections import Counter
 from pathlib import Path
 
 import pandas as pd
@@ -17,6 +20,25 @@ from core.rag.reference_corpus import REFERENCE_SOURCE_ID
 from ui.guard import allow, describe_ingest_error, get_owner
 
 logger = logging.getLogger(__name__)
+
+# Up to this many flagged records are listed inline (a bank statement or a
+# claim, typically). More than that -- a CSV with hundreds of rows -- switches
+# to a summary: nobody reads 300 near-identical reasons, so the screen leads
+# with counts and the few records most worth a look, and keeps the full list
+# in a collapsed, searchable, downloadable table.
+FLAGGED_INLINE_LIMIT = 5
+GROUPS_SHOWN = 4      # distinct rule / LLM reasons spelled out in the summary
+EXAMPLE_ROWS = 3      # example row numbers quoted per group
+
+_UNESCAPED_DOLLAR = re.compile(r"(?<!\\)\$")
+
+
+def md_safe(text) -> str:
+    """Escapes `$` in model-written text before it goes through Streamlit's
+    markdown. Two dollar amounts in one sentence ("over $500 ... $5.00") are
+    otherwise parsed as inline LaTeX: the text between them turns into a
+    math span and the dollar signs vanish."""
+    return _UNESCAPED_DOLLAR.sub(r"\\$", str(text))
 
 
 def render_fraud_verdicts(verdicts: list[dict] | None, summary: dict | None) -> None:
@@ -46,30 +68,120 @@ def render_fraud_verdicts(verdicts: list[dict] | None, summary: dict | None) -> 
                 f"Only the first {summary['total_scored']:,} of {summary['rows_in_file']:,} rows in this file "
                 "were scored — the rest were not checked (scoring ceiling for interactive uploads)."
             )
-    flagged = [v for v in verdicts if v["predicted"] == "FRAUD"]
-    if flagged:
-        st.error(f"⚠ {len(flagged)} record(s) flagged")
-        for v in flagged:
+    numbered = len(verdicts) > 1   # a row number only helps when there is more than one record
+    flagged = []
+    for i, v in enumerate(verdicts, 1):
+        if v["predicted"] == "FRAUD":
             reason = v.get("reason", "")
-            parsed = v.get("parsed") or {}
-            tier = _classify_detection_tier(reason, parsed.get("action", ""))
-            st.caption(f"— [{tier}] {reason}")
-    else:
+            tier = _classify_detection_tier(reason, (v.get("parsed") or {}).get("action", ""))
+            flagged.append((i, tier, reason))
+
+    if not flagged:
         st.success("✓ Nothing flagged — everything extracted looks consistent")
+    elif len(flagged) <= FLAGGED_INLINE_LIMIT:
+        st.error(f"⚠ {len(flagged)} record(s) flagged")
+        for i, tier, reason in flagged:
+            st.caption(md_safe(f"— {f'#{i} ' if numbered else ''}[{tier}] {reason}"))
+    else:
+        _render_flagged_summary(flagged, len(verdicts))
 
     # Banking Tier 1 only (the one schema this was measured as a rare,
     # meaningful signal rather than noise — see drift_detector.py) —
     # independent of the verdict above, so shown for flagged AND clean
     # records alike; a `.get()` no-op for every other domain, which never
     # produces this key at all.
-    caveat_records = [v for v in verdicts if (v.get("parsed") or {}).get("caveat")]
+    caveat_records = [(i, (v.get("parsed") or {})["caveat"]) for i, v in enumerate(verdicts, 1)
+                      if (v.get("parsed") or {}).get("caveat")]
     if caveat_records:
+        # The note is the same sentence for every record: say it once, with
+        # which records it applies to, instead of repeating it N times.
+        by_text: dict[str, list[int]] = {}
+        for i, text in caveat_records:
+            by_text.setdefault(text, []).append(i)
         with st.expander(
-            f"🔍 {len(caveat_records)} record(s) also flagged as statistically unusual "
+            f"🔍 {len(caveat_records):,} record(s) also flagged as statistically unusual "
             "(unsupervised check, independent of the verdict above)"
         ):
-            for v in caveat_records:
-                st.caption((v.get("parsed") or {})["caveat"])
+            for text, rows in by_text.items():
+                st.caption(md_safe(text))
+                if numbered:
+                    shown = ", ".join(f"#{i}" for i in rows[:20])
+                    more = f" … and {len(rows) - 20:,} more" if len(rows) > 20 else ""
+                    st.caption(f"Records: {shown}{more}")
+
+
+def _priority(tier: str, reason: str) -> float:
+    """How much a flagged record deserves a human's first look. A rule hit is
+    a deterministic impossibility (top), an ML hit ranks by its own fraud
+    probability, and an LLM-only hit (a judgement call) comes last."""
+    if tier == "Rule Engine":
+        return 101.0
+    if tier == "ML Detector":
+        m = re.search(r"(\d+(?:\.\d+)?)\s*%", reason)
+        return float(m.group(1)) if m else 50.0
+    return 40.0
+
+
+def _rows(ids: list[int]) -> str:
+    shown = ", ".join(f"#{i}" for i in ids[:EXAMPLE_ROWS])
+    return shown + (" …" if len(ids) > EXAMPLE_ROWS else "")
+
+
+def _layer_summary(flagged: list[tuple[int, str, str]]) -> list[str]:
+    """One line per finding, not per record: identical rule reasons collapse to
+    a count, the ML layer to a probability range, and only a few LLM judgement
+    calls are quoted. Markdown-safe."""
+    lines = []
+    rules = [f for f in flagged if f[1] == "Rule Engine"]
+    by_reason: dict[str, list[int]] = {}
+    for i, _, reason in rules:
+        by_reason.setdefault(reason, []).append(i)
+    for reason, ids in sorted(by_reason.items(), key=lambda kv: -len(kv[1]))[:GROUPS_SHOWN]:
+        lines.append(f"📏 **Rule Engine** — {reason} · {len(ids):,} records (e.g. {_rows(ids)})")
+    if len(by_reason) > GROUPS_SHOWN:
+        lines.append(f"📏 **Rule Engine** — {len(by_reason) - GROUPS_SHOWN} other rule(s) in the full list")
+
+    ml = [f for f in flagged if f[1] == "ML Detector"]
+    if ml:
+        ranked = sorted(ml, key=lambda f: _priority(f[1], f[2]), reverse=True)
+        probs = [_priority(f[1], f[2]) for f in ml]
+        lines.append(
+            f"🧠 **ML Detector** — {len(ml):,} records, fraud probability {min(probs):.0f}–{max(probs):.0f}% "
+            f"(highest: {_rows([f[0] for f in ranked])})"
+        )
+
+    llm = [f for f in flagged if f[1] == "LLM Reasoning"]
+    for i, _, reason in llm[:GROUPS_SHOWN]:
+        lines.append(f"💬 **LLM Reasoning** — #{i}: {reason}")
+    if len(llm) > GROUPS_SHOWN:
+        lines.append(f"💬 **LLM Reasoning** — {len(llm) - GROUPS_SHOWN} more in the full list")
+    return [md_safe(line) for line in lines]
+
+
+def _render_flagged_summary(flagged: list[tuple[int, str, str]], total: int) -> None:
+    """Many flagged records: counts, one line per finding, and the full list
+    collapsed into a searchable/sortable table with a CSV download."""
+    n = len(flagged)
+    st.error(f"⚠ {n:,} of {total:,} records flagged ({n / total:.0%})")
+
+    by_layer = Counter(tier for _, tier, _ in flagged)
+    cols = st.columns(len(by_layer))
+    for col, (tier, count) in zip(cols, by_layer.most_common()):
+        col.metric(tier, f"{count:,}")
+
+    st.markdown("**What was flagged**")
+    for line in _layer_summary(flagged):
+        st.markdown(line)
+
+    frame = pd.DataFrame(flagged, columns=["Row", "Layer", "Reason"])
+    with st.expander(f"All {n:,} flagged records (search and sort)"):
+        # A dataframe renders cells as plain text, so no markdown escaping is needed.
+        st.dataframe(frame, use_container_width=True, hide_index=True)
+    st.download_button(
+        "⬇ Download flagged records (CSV)", frame.to_csv(index=False).encode("utf-8"),
+        file_name="flagged_records.csv", mime="text/csv",
+        key=f"dl_flagged_{n}_{total}_{flagged[0][0]}",
+    )
 
 
 def _classify_detection_tier(reason: str, action: str) -> str:
@@ -104,7 +216,7 @@ def render_explainability(flagged: bool, action: str, reason: str) -> None:
     st.markdown(
         f"<div class='explain-panel'><div class='explain-title'>{title}</div>"
         f"<div class='explain-row'><span class='explain-tier'>{icon} {tier}</span>"
-        f"<span class='explain-reason'>{reason}</span></div></div>",
+        f"<span class='explain-reason'>{html.escape(str(reason)).replace('$', '&#36;')}</span></div></div>",
         unsafe_allow_html=True,
     )
 
@@ -321,7 +433,7 @@ def render_chat_panel(domain_id: str, pipeline, doc_key: str, history_key: str) 
     history = st.session_state.get(history_key, [])
     for turn in history:
         with st.chat_message("user" if turn["speaker"] == "user" else "assistant"):
-            st.markdown(turn["text"])
+            st.markdown(md_safe(turn["text"]))
 
     query = st.chat_input("Ask about this document...", key=f"{domain_id}_chat_input")
     if not query:
@@ -332,7 +444,7 @@ def render_chat_panel(domain_id: str, pipeline, doc_key: str, history_key: str) 
     if not allow("chat"):
         return
     with st.chat_message("user"):
-        st.markdown(query)
+        st.markdown(md_safe(query))
     with st.spinner("Running retrieve → reason → validate..."):
         result = pipeline.run(query, source_document=doc, history=history)
     if result["status"] != "valid":
@@ -343,12 +455,12 @@ def render_chat_panel(domain_id: str, pipeline, doc_key: str, history_key: str) 
     history.append({"speaker": "assistant", "text": data.get("answer", "No answer returned.")})
     st.session_state[history_key] = history
     with st.chat_message("assistant"):
-        st.markdown(data.get("answer", "No answer returned."))
+        st.markdown(md_safe(data.get("answer", "No answer returned.")))
         render_citations(result.get("chunks"), doc)
         flagged = data.get("flag") or data.get("anomaly_flag")
         reason = data.get("flag_reason") or data.get("anomaly_reason")
         if flagged:
-            st.warning(f"⚠ {reason}")
+            st.warning(md_safe(f"⚠ {reason}"))
         if data.get("transactions") is not None:
             c1, c2, c3, c4 = st.columns(4)
             c1.metric("Transactions", len(data.get("transactions", [])))

@@ -13,7 +13,8 @@ from domains.banking.fraud.pipeline import FraudPipeline
 
 from ui.guard import allow
 from ui.shared import (
-    guarded_score, render_document_upload, render_chat_panel, render_floating_chat, render_explainability,
+    guarded_score, md_safe, render_document_upload, render_chat_panel, render_floating_chat,
+    render_explainability,
 )
 
 
@@ -59,7 +60,7 @@ def render_banking_workspace(pipeline) -> None:
             # drift_detector.py for why only this schema's measured
             # false-positive rate (4.5%) made this a meaningful signal
             # rather than noise.
-            st.warning(f"🔍 {parsed['caveat']}")
+            st.warning(md_safe(f"🔍 {parsed['caveat']}"))
 
         if predicted == "FRAUD":
             with st.expander("🔬 Analyst Agent Investigation"):

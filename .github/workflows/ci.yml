@@ -35,6 +35,7 @@ jobs:
           tests/test_duplicate_ingest.py
           tests/test_guard.py
           tests/test_usage_budget.py
+          tests/test_ui_verdicts.py
           tests/test_conversational_rag.py
           tests/test_startup_wiring.py
   docker-build:
