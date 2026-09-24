@@ -24,13 +24,12 @@
 # free) plus per-transaction LLM reasoning through the actual engine,
 # not one holistic judgment call with no rules at all.
 #
-# No reference corpus yet -- Visa (10.x)/Mastercard (48xx) chargeback
-# reason codes were identified as the target source, but unlike
-# Insurance's CMS excerpt or Payroll's IRS Publication 15-T, no single
-# official free document exists to fetch; it would need hand-curating
-# from the public code list. REFERENCE_SOURCE stays the class default
-# (harmless no-op until that corpus exists -- retrieve() only merges in
-# a reference collection that's actually been ingested).
+# Reference corpus -- Regulation E (12 CFR Part 1005: unauthorized-EFT
+# definition, consumer liability tiers, error-resolution timelines),
+# ingested once per vector store by
+# domains/banking/documents/data/ingest_reference_corpus.py and merged
+# into retrieval alongside the uploaded document (see data.reference_corpus
+# below and REFERENCE_SOURCE in domains/banking/pipeline.py).
 
 domain:
   id: banking
@@ -87,6 +86,7 @@ llm:
 data:
   demo_csv: domains/banking/fraud/data/train.csv
   statements_dir: domains/banking/documents/data/statements
+  reference_corpus: domains/banking/reference_corpus/regulation_e_excerpt.txt
 
 eval:
   classification:
