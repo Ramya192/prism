@@ -72,6 +72,7 @@ data:
   tier2_demo_csv: domains/financial_services/data/tier2_train.csv
   statements_dir: domains/financial_services/data/statements
   reference_corpus: domains/financial_services/reference_corpus/fincen_cvc_guidance_excerpt.txt
+  reference_corpus_label: "FinCEN CVC Guidance"
 
 capabilities:
   - id: document_qa

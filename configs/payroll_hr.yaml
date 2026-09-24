@@ -68,6 +68,7 @@ data:
   hr_demo_csv: domains/payroll_hr/hr/data/train.csv
   statements_dir: domains/payroll_hr/payroll/data/statements
   reference_corpus: domains/payroll_hr/reference_corpus/irs_pub15t_excerpt.txt
+  reference_corpus_label: "IRS Pub. 15-T"
 
 # One upload, two capabilities -- document_qa is the open chat the user
 # can keep using after ingest; payroll_audit runs once, automatically,
