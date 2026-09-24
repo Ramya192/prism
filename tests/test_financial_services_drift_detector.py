@@ -1,7 +1,12 @@
 # DriftDetector for financial_services -- see tools/drift_detector.py.
 # Deliberately NOT wired into FintechDetectorAgent's verdicts: measured
-# legit-outlier rates (13.9% Tier 1, 12.0% Tier 2, vs Banking's 4.5% bar)
-# make it noise, and Tier 2's outlier rate is identical for fraud and legit.
+# legit-outlier rates (13.9% Tier 1, 12.0% Tier 2, vs Banking's 4.5% bar,
+# see domains/banking/fraud/agents/detector_agent.py's analyse()) make it
+# noise, and Tier 2's outlier rate is identical for fraud and legit. Same
+# is_outlier()-rate-over-holdout methodology used for the other domains'
+# own drift detectors -- see tests/test_insurance_drift_detector.py,
+# test_payroll_drift_detector.py, test_hr_drift_detector.py (10.4%/43.2%/
+# 51.1%), none of which are wired in either.
 
 import pandas as pd
 import pytest

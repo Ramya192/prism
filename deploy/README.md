@@ -113,7 +113,7 @@ EC2 Console → **Instances** (left sidebar) → **Launch instances**.
      `.pem` is fine if you use PowerShell's built-in `ssh`, which is what
      the rest of this guide assumes)
    - Click **Create key pair** — it downloads automatically. **Save this
-     file somewhere safe** (e.g. `C:\Users\priya\.ssh\prism-key.pem`) —
+     file somewhere safe** (e.g. `C:\Users\<you>\.ssh\prism-key.pem`) —
      AWS will not let you download it again.
 5. **Network settings** → click **Edit** → **Select existing security
    group** → choose `prism-sg` (the one created in Part 3).
@@ -160,7 +160,7 @@ Release Elastic IP address**) if you tear the instance down for good.
 From PowerShell on your machine (adjust the key path and IP):
 
 ```powershell
-ssh -i "C:\Users\priya\.ssh\prism-key.pem" ec2-user@<elastic-ip>
+ssh -i "C:\Users\<you>\.ssh\prism-key.pem" ec2-user@<elastic-ip>
 ```
 
 First connection: type `yes` when asked about the host's fingerprint.
@@ -169,8 +169,8 @@ If you get a "Permissions are too open" / "UNPROTECTED PRIVATE KEY FILE"
 error, PowerShell needs the key file locked down:
 
 ```powershell
-icacls "C:\Users\priya\.ssh\prism-key.pem" /inheritance:r
-icacls "C:\Users\priya\.ssh\prism-key.pem" /grant:r "$($env:USERNAME):(R)"
+icacls "C:\Users\<you>\.ssh\prism-key.pem" /inheritance:r
+icacls "C:\Users\<you>\.ssh\prism-key.pem" /grant:r "$($env:USERNAME):(R)"
 ```
 
 ### 6b. Verify the bootstrap script finished
@@ -223,14 +223,39 @@ docker compose logs -f
 (`Ctrl+C` exits the log follow — the container keeps running in the
 background either way, `-d` already detached it.)
 
+### 6f. Ingest the reference corpora (once per fresh vector store)
+
+The instance's `vector_store/` starts empty, so chat has no domain policy
+grounding (Regulation E, CMS Ch. 26, IRS Pub 15-T, FinCEN CVC guidance)
+until each domain's reference corpus is ingested. Run all four — each is
+idempotent, and the store persists across restarts via the compose volume:
+
+```bash
+docker compose exec prism python -m domains.banking.documents.data.ingest_reference_corpus
+docker compose exec prism python -m domains.insurance.data.ingest_reference_corpus
+docker compose exec prism python -m domains.payroll_hr.data.ingest_reference_corpus
+docker compose exec prism python -m domains.financial_services.data.ingest_reference_corpus
+```
+
+Redeploying code later is just `git pull && docker compose up --build -d`
+— the ingest only needs repeating if `vector_store/` is wiped.
+
+The ML scorers need no data on the instance: their trained models ship in
+the image (`models/*.joblib`, committed to the repo). If startup logs show
+`Ignoring model artifact ... built with ...`, the image's
+scikit-learn/LightGBM/XGBoost differ from the ones the artifacts were built
+with — rebuild them locally (`python -m core.model_store --rebuild`), commit,
+and redeploy.
+
 ---
 
 ## Part 7 — Verify
 
 Open `http://<elastic-ip>:8501` in a browser. You should see the Prism
-UI. Walk both domains through once — a fraud transaction, and
-ingest+query one of the committed demo statement PDFs — to confirm it's
-not just serving a blank page.
+UI. Walk all 4 domains through once — pick a sample file on the landing
+page, confirm the detected domain, ingest it, read the fraud verdict, and
+ask a chat question that should cite the domain's reference corpus — to
+confirm it's not just serving a blank page.
 
 ---
 
@@ -262,6 +287,12 @@ not just serving a blank page.
 - **SSH connection times out**: check the security group's SSH rule
   source — if your IP changed since Part 3 (e.g. different wifi), edit
   the rule to "My IP" again to refresh it.
+- **Old uploads linger in the vector store**: documents uploaded before
+  per-visitor naming have no owner tag, so the duplicate check (correctly)
+  ignores them and no visitor's chat can reach them. Clear them once with
+  `docker compose exec prism python -m core.rag.purge_legacy_uploads`
+  (lists only), then re-run with `--apply` to delete. Reference corpora
+  are never touched.
 
 ---
 

@@ -85,7 +85,7 @@ llm:
   embedding_model: "${EMBEDDING_MODEL:text-embedding-3-small}"
 
 data:
-  demo_csv: domains/banking/fraud/data/transactions_balanced.csv
+  demo_csv: domains/banking/fraud/data/train.csv
   statements_dir: domains/banking/documents/data/statements
 
 eval:

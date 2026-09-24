@@ -40,7 +40,7 @@ def main(start: int = 0, end: int = None):
 
     total = len(pdfs)
     print("=" * 60)
-    print("Prism (bfsi_documents) — Bulk Ingest Script")
+    print("Prism (banking documents) — Bulk Ingest Script")
     print("=" * 60)
     print(f"📁 Source:  {STATEMENTS_DIR}")
     print(f"📄 Files:   {total} PDFs")
@@ -72,7 +72,7 @@ def main(start: int = 0, end: int = None):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Bulk ingest PDFs into Prism's bfsi_documents domain")
+    parser = argparse.ArgumentParser(description="Bulk ingest PDFs into Prism's banking domain")
     parser.add_argument("--start", type=int, default=0, help="Start index (0-based)")
     parser.add_argument("--end", type=int, default=None, help="End index (exclusive)")
     args = parser.parse_args()

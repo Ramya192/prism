@@ -5,8 +5,8 @@
 # os.getenv(name, default) — just done once, centrally, at load time.
 #
 # Deliberately does NOT force domain-specific sections (thresholds, model,
-# vector_db, llm, data, eval) into one shared schema: bfsi_fraud and
-# bfsi_documents genuinely need different config shapes. Those sections are
+# vector_db, llm, data, eval) into one shared schema: banking fraud and
+# banking documents genuinely need different config shapes. Those sections are
 # kept as a resolved raw dict on DomainConfig.extra, and each domain's own
 # Pipeline class (see domains/<id>/pipeline.py) is what knows how to read it.
 
@@ -62,7 +62,7 @@ class ClassificationHints(BaseModel):
 class CapabilityConfig(BaseModel):
     """One analysis a document-shaped domain can run against an ingested
     file. "auto" capabilities run immediately inside Pipeline.ingest() —
-    the one-upload verdict (e.g. bfsi_documents' anomaly_scan, payroll's
+    the one-upload verdict (e.g. banking documents' anomaly_scan, payroll's
     payroll_audit). "on_demand" capabilities (document_qa) are the open
     chat step the user can keep using afterward, against the same
     ingestion — never a reason to re-upload the same document."""
@@ -83,7 +83,7 @@ class DomainConfig(BaseModel):
     pipeline: Optional[PipelineConfig] = None
     agents: list[AgentConfig] = Field(default_factory=list)
     classification_hints: ClassificationHints = Field(default_factory=ClassificationHints)
-    # Empty for domains with no document/chat concept (e.g. bfsi_fraud's
+    # Empty for domains with no document/chat concept (e.g. banking fraud's
     # one-shot transaction verdict) — capabilities only apply to
     # document-shaped domains that ingest a file once and then answer
     # more than one question about it.

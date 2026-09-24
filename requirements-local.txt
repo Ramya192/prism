@@ -6,7 +6,7 @@
 #
 # NOT used by Dockerfile / the AWS deployment -- those install only
 # requirements.txt, since ENV=production there forces LLM_PROVIDER=openai
-# (see domains/bfsi_documents/settings.py), which never imports any of this.
+# (see domains/banking/documents/settings.py), which never imports any of this.
 
 # Pulls in the full CUDA-enabled PyTorch stack (2.6+ GB) -- fine on a dev
 # laptop, much too heavy for a free-tier cloud instance that never uses it.

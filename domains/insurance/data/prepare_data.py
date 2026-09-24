@@ -6,11 +6,11 @@
 # (10,000 claims, real per-CLAIM Is_Fraud label, 8.29% fraud rate, USD).
 #
 # This is the SECOND dataset considered for this domain, not the first.
-# The original plan (per configs/healthcare.yaml's original stub comment)
+# The original plan (per configs/insurance.yaml's original stub comment)
 # pointed at rohitrox/healthcare-provider-fraud-detection-analysis --
 # real Medicare data, but its fraud label only exists at the PROVIDER
 # level (aggregated across all of a provider's claims), which conflicts
-# with how every other domain in this platform works: bfsi_fraud judges
+# with how every other domain in this platform works: banking fraud judges
 # the transaction, payroll judges the payslip/row -- never the entity
 # that produced it. Scoring per-provider here would have meant either
 # breaking that pattern, or inheriting the provider's label onto every
@@ -21,7 +21,7 @@
 # F1 0.8403 on a held-out random split), not assumed.
 #
 # No currency field, but Patient_State values (NY, etc.) and Insurance_Type
-# (Medicaid) are US-specific -- USD, consistent with bfsi_fraud Tier 1 and
+# (Medicaid) are US-specific -- USD, consistent with banking fraud Tier 1 and
 # payroll Tier 1's currency (see docs/DATA_CONVENTIONS.md).
 #
 # Usage (from the prism/ repo root):

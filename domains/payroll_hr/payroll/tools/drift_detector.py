@@ -8,6 +8,8 @@
 # plugged into the live decision flow.
 
 import pandas as pd
+
+from core.model_store import load_or_train
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 
@@ -19,7 +21,7 @@ class DriftDetector:
         self.scaler = StandardScaler()
         self.model = None
         self.trained = False
-        self._train(data_path, contamination)
+        load_or_train(self, data_path, contamination)
 
     def _train(self, data_path, contamination):
         try:

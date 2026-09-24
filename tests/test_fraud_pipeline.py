@@ -202,7 +202,7 @@ class TestDriftCaveat:
     """Isolation Forest, wired into Tier 1 only -- see detector_agent.py's
     analyse() for why Tier 2/3 are deliberately excluded (DriftDetector's
     features are Tier 1's own schema) and why this domain specifically
-    (unlike payroll/healthcare/hr_compliance) earned live integration:
+    (unlike payroll/insurance/HR) earned live integration:
     measured 4.5% legit-outlier rate here vs. 10-51% elsewhere, so the
     caveat is a rare, meaningful signal rather than noise."""
 

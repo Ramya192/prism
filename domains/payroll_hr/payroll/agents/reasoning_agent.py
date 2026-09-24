@@ -8,6 +8,7 @@
 # check that actually verifies the arithmetic — this agent only extracts
 # and gives its own (LLM) read of whether anything looks wrong.
 
+from core.rag.prompt_safety import UNTRUSTED_CONTEXT_NOTICE
 import json
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -117,6 +118,8 @@ Do NOT flag normal, correctly-calculated payslip line items just because
 the amounts are large.
 All amounts are in USD. Always use the $ symbol. Never use ₹ or any other
 currency symbol.
+
+{UNTRUSTED_CONTEXT_NOTICE}
 
 Context:
 {context}

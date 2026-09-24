@@ -22,6 +22,8 @@ from pathlib import Path
 from core.orchestrator import AgentOrchestrator
 from domains.payroll_hr.payroll.tools.generate_payroll_register import compute_payslip, generate_pdf
 
+pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("reference_corpora")]
+
 
 @pytest.fixture(scope="session")
 def pipeline():

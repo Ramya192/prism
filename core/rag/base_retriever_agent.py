@@ -10,7 +10,7 @@
 # (PERSONA, HYDE_DOC_PHRASE, HYDE_INSTRUCTION, VARIANT_DOC_PHRASE), not a
 # config flag or copy-pasted method.
 #
-# IMPORTANT: bfsi_documents is live in production and already RAGAS-
+# IMPORTANT: banking documents is live in production and already RAGAS-
 # evaluated. This extraction changes zero logic and, critically, zero
 # PROMPT TEXT for it -- its subclass's class attributes are set to
 # reproduce its exact original _hyde()/_generate_variants() strings,
@@ -96,13 +96,25 @@ Return only 3 queries, one per line, no numbering, no bullets."""
                 return chunks
 
             import cohere
+            from cohere.core import ApiError as CohereApiError
 
-            co = cohere.Client(self.settings.COHERE_API_KEY)
-            results = co.rerank(
-                query=query,
-                documents=[c["text"] for c in chunks],
-                model="rerank-english-v3.0",
-            )
+            try:
+                co = cohere.Client(self.settings.COHERE_API_KEY)
+                results = co.rerank(
+                    query=query,
+                    documents=[c["text"] for c in chunks],
+                    model="rerank-english-v3.0",
+                )
+            except CohereApiError:
+                # A configured-but-invalid/expired key (401), rate limit
+                # (429), or a Cohere-side outage should degrade the same
+                # way an unset key already does above -- rerank is an
+                # optional quality boost, not something that should take
+                # down every /analyze or chat call when it fails.
+                logger.warning("Cohere rerank call failed -- skipping rerank, using RRF-merged order", exc_info=True)
+                for c in chunks:
+                    c["rerank_score"] = None
+                return chunks
             for r in results.results:
                 chunks[r.index]["rerank_score"] = r.relevance_score
             return sorted(chunks, key=lambda x: x["rerank_score"], reverse=True)

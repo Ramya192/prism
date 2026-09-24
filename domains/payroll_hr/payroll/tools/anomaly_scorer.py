@@ -2,7 +2,7 @@
 # ML anomaly tier for CSV payroll-register uploads (many employee rows at
 # once) -- see agents/payroll_detector_agent.py's module docstring for how
 # this fits alongside the rules layer (reconciliation math) and the LLM
-# fallback, mirroring bfsi_fraud's rules -> ML -> LLM shape.
+# fallback, mirroring banking fraud's rules -> ML -> LLM shape.
 #
 # Trained on REAL San Francisco city employee compensation
 # (https://www.kaggle.com/datasets/kaggle/sf-salaries, CC0) with
@@ -25,6 +25,8 @@
 # dataset's injection method, which only ever corrupts the stated total.
 
 import pandas as pd
+
+from core.model_store import load_or_train
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 
@@ -44,7 +46,7 @@ class PayrollAnomalyScorer:
         self.model = None
         self.scaler = StandardScaler()
         self.trained = False
-        self._train(data_path)
+        load_or_train(self, data_path)
 
     def _train(self, data_path):
         try:

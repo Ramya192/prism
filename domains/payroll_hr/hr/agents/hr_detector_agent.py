@@ -1,5 +1,5 @@
 # domains/payroll_hr/hr/agents/hr_detector_agent.py
-# HrDetectorAgent — the job-posting counterpart to bfsi_fraud's
+# HrDetectorAgent — the job-posting counterpart to banking fraud's
 # FraudDetectorAgent, payroll's PayrollDetectorAgent, and healthcare's
 # HealthcareDetectorAgent, same rules -> ML -> LLM shape. Scores a single
 # job posting: is THIS posting fraudulent (a recruitment scam), not

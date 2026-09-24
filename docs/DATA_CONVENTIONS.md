@@ -26,8 +26,8 @@ This distinction determines whether currency conversion is safe by itself, or ac
 |---|---|---|---|
 | `banking` fraud | 1 | `mlg-ulb/creditcardfraud` | EUR→USD converted |
 | `banking` fraud | 2 | `mdtalhask/ai-powered-banking-fraud-detection-dataset-2025` | Assumed USD (FICO-scale credit score, no currency field) |
-| `payroll` | 1 (ML anomaly) | `kaggle/sf-salaries` | USD (US city government data) |
-| `payroll` | 2 | `jb1433/sample-employees-monthly-salary` | INR→USD converted |
-| `healthcare` | 1 | `nudratabbas/healthcare-fraud-detection-dataset` | USD (US states/Medicaid, no conversion needed) |
-| `healthcare` | 2 | `tejalaveti2306/health-insurance-claims-data-for-fraud-detection` | USD (no conversion needed; unrealistic amount scale flagged separately, not a currency issue) |
-| `hr_compliance` | 1 | `shivamb/real-or-fake-fake-jobposting-prediction` | N/A — deliberately excludes salary amounts entirely (multi-country dataset, no currency field, 84% missing); uses presence/absence as a currency-agnostic signal instead |
+| `payroll_hr` (payroll) | 1 (ML anomaly) | `kaggle/sf-salaries` | USD (US city government data) |
+| `payroll_hr` (payroll) | 2 | `jb1433/sample-employees-monthly-salary` | INR→USD converted |
+| `insurance` | 1 | `nudratabbas/healthcare-fraud-detection-dataset` | USD (US states/Medicaid, no conversion needed) |
+| `insurance` | 2 | `tejalaveti2306/health-insurance-claims-data-for-fraud-detection` | USD (no conversion needed; unrealistic amount scale flagged separately, not a currency issue) |
+| `payroll_hr` (hr) | 1 | `shivamb/real-or-fake-fake-jobposting-prediction` | N/A — deliberately excludes salary amounts entirely (multi-country dataset, no currency field, 84% missing); uses presence/absence as a currency-agnostic signal instead |

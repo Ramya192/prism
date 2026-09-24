@@ -17,13 +17,15 @@
 # instead — see that file and detector_agent.py's module docstring.
 #
 # Random Forest scorer. Caller picks the data file (see class docstring
-# below) — FraudDetectorAgent trains it on
-# domains/banking/fraud/data/transactions_balanced.csv by default; eval_harness.py
-# points it at data/train.csv instead so evaluation never touches the holdout.
+# below) — FraudDetectorAgent and eval_harness.py both use data/train.csv, so
+# the deployed model is the one the published eval numbers measure (and
+# evaluation never touches the holdout).
 # Used by FraudDetectorAgent as the first decision layer (after rule-based filter)
 # Returns a fraud probability score: 0.0 (definitely legit) -> 1.0 (definitely fraud)
 
 import pandas as pd
+
+from core.model_store import load_or_train
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
@@ -50,7 +52,7 @@ class MLScorer:
         self.scaler  = StandardScaler()
         self.trained = False
         self._requested_cols = feature_cols or self.FEATURE_COLS
-        self._train(data_path)
+        load_or_train(self, data_path, signature=repr(self._requested_cols))
 
     # ── Training ────────────────────────────────────────────────────────
     def _train(self, data_path):

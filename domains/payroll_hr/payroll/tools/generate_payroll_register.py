@@ -8,7 +8,7 @@ the payslip figures itself instead of reading one).
 One demo employee's payslip is deliberately generated with a miscalculated
 net pay (the health-insurance deduction line is computed but silently left
 out of the stated net pay) — the same "intentional signal" pattern already
-used for bfsi_fraud's rule-based demo data and bfsi_documents' M100
+used for banking fraud's rule-based demo data and banking documents' M100
 merchant, so domains/payroll_hr/payroll/agents/validator_agent.py's reconciliation
 check has something real to catch.
 

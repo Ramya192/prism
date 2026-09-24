@@ -8,7 +8,7 @@
 # already in context rather than the model re-deriving one from a fresh,
 # disconnected retrieval.
 #
-# Field names differ slightly per domain (bfsi_documents: anomaly_flag/
+# Field names differ slightly per domain (banking documents: anomaly_flag/
 # anomaly_reason; payroll: flag/flag_reason) -- handled generically here
 # rather than duplicated per domain.
 
