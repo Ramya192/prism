@@ -178,11 +178,14 @@ def render_config_panel(domain_config) -> None:
     rows = [("Domain", domain_config.name), ("Detection", "Rules → ML → LLM")]
     if domain_config.capabilities:
         rows.append(("Agents", " + ".join(c.label for c in domain_config.capabilities)))
-    ref_corpus = extra.get("data", {}).get("reference_corpus")
-    rows.append((
-        "Knowledge Base",
-        Path(ref_corpus).stem.replace("_", " ").title() if ref_corpus else "Document only",
-    ))
+    data_cfg = extra.get("data", {})
+    ref_corpus = data_cfg.get("reference_corpus")
+    # An explicit label reads better than a title-cased filename ("Irs Pub15T
+    # Excerpt"); the filename is only the fallback for a config without one.
+    kb_label = data_cfg.get("reference_corpus_label") or (
+        Path(ref_corpus).stem.replace("_", " ").title() if ref_corpus else "Document only"
+    )
+    rows.append(("Knowledge Base", kb_label))
     model = extra.get("llm", {}).get("openai_model") or extra.get("model", {}).get("name")
     if model:
         rows.append(("LLM Model", model))

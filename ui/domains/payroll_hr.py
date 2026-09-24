@@ -5,6 +5,7 @@
 
 from pathlib import Path
 
+import altair as alt
 import pandas as pd
 import streamlit as st
 
@@ -82,13 +83,28 @@ def render_payroll_hr_workspace(pipeline) -> None:
                 use_container_width=True, hide_index=True,
             )
 
-            st.scatter_chart(
-                clustered, x="ot_pct", y="other_pct", color="cluster", size=20,
+            # Explicit axis domains: these shares are exactly 0 for whole clusters
+            # (base-only sits at the origin), and the auto-scaled axes of
+            # st.scatter_chart start above 0, which clipped every point out of view.
+            # A stratified sample keeps the payload small (~50k rows otherwise).
+            sample = clustered.groupby("cluster", group_keys=False).apply(
+                lambda g: g.sample(min(len(g), 1000), random_state=0)
+            )
+            st.altair_chart(
+                alt.Chart(sample).mark_circle(size=60, opacity=0.4).encode(
+                    x=alt.X("ot_pct:Q", title="Overtime share of total pay",
+                            scale=alt.Scale(domain=[-0.05, 1.0])),
+                    y=alt.Y("other_pct:Q", title="Other-pay share of total pay",
+                            scale=alt.Scale(domain=[-0.05, 1.0])),
+                    color=alt.Color("cluster:N", title="cluster", scale=alt.Scale(scheme="category10")),
+                ),
+                use_container_width=True,
             )
             st.caption(
-                "Each point is one flagged record, positioned by its overtime-pay and "
-                "other-pay share of total compensation. Three visually distinct groups "
-                "correspond to the three injected fraud patterns (base-only, overtime-heavy, "
-                "other-heavy) — discovered without ever telling the algorithm which pattern "
-                "each record came from."
+                "Each point is a flagged record (a sample of up to 1,000 per cluster is drawn), "
+                "positioned by its overtime-pay and other-pay share of total compensation. "
+                "Three distinct groups correspond to the three injected fraud patterns: "
+                "base-only (all at the origin), overtime-heavy (along the x-axis) and "
+                "other-heavy (along the y-axis) — discovered without ever telling the "
+                "algorithm which pattern each record came from."
             )

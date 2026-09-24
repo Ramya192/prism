@@ -71,6 +71,7 @@ data:
   demo_csv: domains/insurance/data/train.csv
   statements_dir: domains/insurance/data/statements
   reference_corpus: domains/insurance/reference_corpus/cms_claims_processing_excerpt.txt
+  reference_corpus_label: "CMS Claims Manual, Ch. 26"
 
 # One upload, two capabilities -- document_qa is the open chat the user
 # can keep using after ingest; claim_review runs once, automatically,
