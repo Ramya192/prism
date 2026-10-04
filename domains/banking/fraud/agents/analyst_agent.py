@@ -5,6 +5,9 @@ import time
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from domains.banking.fraud.settings import OPENAI_API_KEY, MODEL_NAME
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class AnalystAgent:
@@ -65,12 +68,12 @@ class AnalystAgent:
                 return response.content
 
             except Exception as e:
-                print(f"  [AnalystAgent] Attempt {attempt}/{self.MAX_RETRIES} failed: {e}")
+                logger.warning(f"[AnalystAgent] Attempt {attempt}/{self.MAX_RETRIES} failed: {e}")
                 if attempt < self.MAX_RETRIES:
-                    print(f"  [AnalystAgent] Retrying in {self.RETRY_DELAY}s...")
+                    logger.info(f"[AnalystAgent] Retrying in {self.RETRY_DELAY}s...")
                     time.sleep(self.RETRY_DELAY)
                 else:
-                    print(f"  [AnalystAgent] All retries exhausted.")
+                    logger.error(f"[AnalystAgent] All retries exhausted.")
                     return (
                         "Fraud Pattern: Unknown\n"
                         "Risk Factors: Analysis unavailable\n"

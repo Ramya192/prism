@@ -108,7 +108,7 @@ def load_or_train(obj, data_path, *train_args, signature: str = "") -> bool:
             reason = f"unreadable ({e})"
         if reason is None:
             vars(obj).update(state)
-            print(f"  [{type(obj).__name__}] Loaded {art.name}")
+            logger.info(f"[{type(obj).__name__}] Loaded {art.name}")
             return True
         logger.warning("Ignoring model artifact %s: %s", art.name, reason)
 
@@ -120,7 +120,7 @@ def load_or_train(obj, data_path, *train_args, signature: str = "") -> bool:
                 {"meta": {**expected, "data_sha256": data_hash}, "state": dict(vars(obj))},
                 art, compress=3,
             )
-            print(f"  [{type(obj).__name__}] Saved {art.name}")
+            logger.info(f"[{type(obj).__name__}] Saved {art.name}")
         except Exception as e:  # a read-only image must not break a working scorer
             logger.warning("Could not save model artifact %s: %s", art.name, e)
     return False

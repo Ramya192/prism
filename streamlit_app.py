@@ -28,6 +28,7 @@ import os
 import streamlit as st
 
 from core.config_loader import ConfigLoader
+from core.logging_setup import configure_logging
 from core.orchestrator import AgentOrchestrator
 from core.domain_classifier_agent import DomainClassifierAgent
 
@@ -42,6 +43,7 @@ from ui.domains.insurance import render_insurance_workspace
 from ui.domains.financial_services import render_financial_services_workspace
 from ui.domains.payroll_hr import render_payroll_hr_workspace
 
+configure_logging()   # scorer/detector status lines -> stdout (docker compose logs); PRISM_LOG_LEVEL tunes it
 st.set_page_config(page_title="Prism", page_icon="◈", layout="wide")
 require_access_code()   # no-op unless PRISM_ACCESS_CODE is set (ui/guard.py)
 

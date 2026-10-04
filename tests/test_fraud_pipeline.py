@@ -71,6 +71,12 @@ class TestFraudDetectorAgentParsing:
         assert parsed["caveat"] is not None
         assert "statistically unusual" in parsed["caveat"]
 
+    def test_parse_response_reads_the_deciding_layer(self):
+        base = "Risk Level: HIGH\nReason: Zero amount.\nAction: BLOCK"
+        assert FraudDetectorAgent.parse_response(base + "\nDecided by: LLM Reasoning")["decided_by"] == "LLM Reasoning"
+        assert "decided_by" not in FraudDetectorAgent.parse_response(base + "\nDecided by: a guess")
+        assert "decided_by" not in FraudDetectorAgent.parse_response(base)
+
     def test_is_fraud_true_for_medium_and_high(self):
         assert FraudDetectorAgent.is_fraud({"risk_level": "MEDIUM"})
         assert FraudDetectorAgent.is_fraud({"risk_level": "HIGH"})

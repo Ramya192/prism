@@ -187,6 +187,12 @@ Return only 3 queries, one per line, no numbering, no bullets."""
             }
             for i in range(len(top20["documents"]))
         ]
+        # collection.get(ids=...) does not promise to return rows in the order
+        # the ids were given, and with no reranker (OpenAI provider, no Cohere
+        # key) this fused order is the ONLY relevance signal -- re-impose it so
+        # reranked[:k] really is the top-k by RRF, not an arbitrary 5 of the 20.
+        rank = {doc_id: r for r, doc_id in enumerate(merged_ids)}
+        chunks = [c for _, c in sorted(zip(top20["ids"], chunks), key=lambda p: rank.get(p[0], len(rank)))]
 
         reranked = self._rerank(query, chunks)
         return reranked[:k]

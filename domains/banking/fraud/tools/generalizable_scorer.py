@@ -34,6 +34,9 @@ import pandas as pd
 from core.model_store import load_or_train
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class GeneralizableScorer:
@@ -67,9 +70,9 @@ class GeneralizableScorer:
             available = [c for c in self.FEATURE_COLS if c in df.columns]
             missing = [c for c in self.FEATURE_COLS if c not in df.columns]
             if missing:
-                print(f"  [GeneralizableScorer] Missing columns (will be ignored): {missing}")
+                logger.warning(f"[GeneralizableScorer] Missing columns (will be ignored): {missing}")
             if not available:
-                print("  [GeneralizableScorer] No usable feature columns found. Scorer disabled.")
+                logger.warning("[GeneralizableScorer] No usable feature columns found. Scorer disabled.")
                 return
 
             X = df[available].copy()
@@ -87,13 +90,13 @@ class GeneralizableScorer:
             self.model.fit(X_scaled, y)
             self.feature_cols = available
             self.trained = True
-            print(f"  [GeneralizableScorer] Trained on {len(df):,} txns "
+            logger.info(f"[GeneralizableScorer] Trained on {len(df):,} txns "
                   f"({y.sum()} fraud, {y.mean():.2%} base rate)")
         except FileNotFoundError:
-            print(f"  [GeneralizableScorer] {data_path} not found. "
+            logger.warning(f"[GeneralizableScorer] {data_path} not found. "
                   f"Run domains/banking/fraud/data/prepare_tier2_data.py first.")
         except Exception as e:
-            print(f"  [GeneralizableScorer] Training failed: {e}")
+            logger.error(f"[GeneralizableScorer] Training failed: {e}")
 
     def score(self, transaction: dict) -> float:
         """Returns fraud probability 0.0-1.0. Returns 0.5 (borderline) if
@@ -118,7 +121,7 @@ class GeneralizableScorer:
             X_scaled = self.scaler.transform(X)
             return float(self.model.predict_proba(X_scaled)[0][1])
         except Exception as e:
-            print(f"  [GeneralizableScorer] Scoring error: {e}")
+            logger.error(f"[GeneralizableScorer] Scoring error: {e}")
             return 0.5
 
     def score_batch(self, df: pd.DataFrame):

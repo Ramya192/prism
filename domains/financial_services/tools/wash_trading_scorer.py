@@ -20,6 +20,9 @@ import pandas as pd
 from core.model_store import load_or_train
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class WashTradingScorer:
@@ -56,9 +59,9 @@ class WashTradingScorer:
             available = [c for c in self.FEATURE_COLS if c in df.columns]
             missing = [c for c in self.FEATURE_COLS if c not in df.columns]
             if missing:
-                print(f"  [WashTradingScorer] Missing columns (will be ignored): {missing}")
+                logger.warning(f"[WashTradingScorer] Missing columns (will be ignored): {missing}")
             if not available:
-                print("  [WashTradingScorer] No usable feature columns found. Scorer disabled.")
+                logger.warning("[WashTradingScorer] No usable feature columns found. Scorer disabled.")
                 return
 
             X = df[available].copy()
@@ -76,13 +79,13 @@ class WashTradingScorer:
             self.model.fit(X_scaled, y)
             self.feature_cols = available
             self.trained = True
-            print(f"  [WashTradingScorer] Trained on {len(df):,} txns "
+            logger.info(f"[WashTradingScorer] Trained on {len(df):,} txns "
                   f"({y.sum()} manipulative, {y.mean():.2%} base rate)")
         except FileNotFoundError:
-            print(f"  [WashTradingScorer] {data_path} not found. "
+            logger.warning(f"[WashTradingScorer] {data_path} not found. "
                   f"Run domains/financial_services/data/prepare_tier2_data.py first.")
         except Exception as e:
-            print(f"  [WashTradingScorer] Training failed: {e}")
+            logger.error(f"[WashTradingScorer] Training failed: {e}")
 
     def score(self, record: dict) -> float:
         """Returns manipulation probability 0.0-1.0. Returns 0.5
@@ -105,7 +108,7 @@ class WashTradingScorer:
             X_scaled = self.scaler.transform(X)
             return float(self.model.predict_proba(X_scaled)[0][1])
         except Exception as e:
-            print(f"  [WashTradingScorer] Scoring error: {e}")
+            logger.error(f"[WashTradingScorer] Scoring error: {e}")
             return 0.5
 
     def score_batch(self, df: pd.DataFrame):

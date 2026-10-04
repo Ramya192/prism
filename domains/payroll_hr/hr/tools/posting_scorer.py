@@ -26,6 +26,9 @@ import pandas as pd
 from core.model_store import load_or_train
 from xgboost import XGBClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class PostingFraudScorer:
@@ -87,9 +90,9 @@ class PostingFraudScorer:
             available = [c for c in self.FEATURE_COLS if c in df.columns]
             missing = [c for c in self.FEATURE_COLS if c not in df.columns]
             if missing:
-                print(f"  [PostingFraudScorer] Missing columns (will be ignored): {missing}")
+                logger.warning(f"[PostingFraudScorer] Missing columns (will be ignored): {missing}")
             if not available:
-                print("  [PostingFraudScorer] No usable feature columns found. Scorer disabled.")
+                logger.warning("[PostingFraudScorer] No usable feature columns found. Scorer disabled.")
                 return
 
             X = df[available].copy()
@@ -112,13 +115,13 @@ class PostingFraudScorer:
             self.model.fit(X_scaled, y)
             self.feature_cols = available
             self.trained = True
-            print(f"  [PostingFraudScorer] Trained on {len(df):,} postings "
+            logger.info(f"[PostingFraudScorer] Trained on {len(df):,} postings "
                   f"({y.sum()} fraud, {y.mean():.2%} base rate)")
         except FileNotFoundError:
-            print(f"  [PostingFraudScorer] {data_path} not found. "
+            logger.warning(f"[PostingFraudScorer] {data_path} not found. "
                   f"Run domains/payroll_hr/hr/data/prepare_data.py first.")
         except Exception as e:
-            print(f"  [PostingFraudScorer] Training failed: {e}")
+            logger.error(f"[PostingFraudScorer] Training failed: {e}")
 
     def score(self, record: dict) -> float:
         if not self.trained:
@@ -139,7 +142,7 @@ class PostingFraudScorer:
             X_scaled = self.scaler.transform(X)
             return float(self.model.predict_proba(X_scaled)[0][1])
         except Exception as e:
-            print(f"  [PostingFraudScorer] Scoring error: {e}")
+            logger.error(f"[PostingFraudScorer] Scoring error: {e}")
             return 0.5
 
     def score_batch(self, df: pd.DataFrame):

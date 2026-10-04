@@ -12,6 +12,9 @@ from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 
 from domains.payroll_hr.hr.tools.posting_scorer import PostingFraudScorer
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DriftDetector:
@@ -27,7 +30,7 @@ class DriftDetector:
             df = pd.read_csv(data_path)
             available = [c for c in PostingFraudScorer.FEATURE_COLS if c in df.columns]
             if not available:
-                print("  [DriftDetector] No usable feature columns found. Disabled.")
+                logger.warning("[DriftDetector] No usable feature columns found. Disabled.")
                 return
 
             X = df[available].copy()
@@ -43,12 +46,12 @@ class DriftDetector:
             self.model.fit(X_scaled)
             self.feature_cols = available
             self.trained = True
-            print(f"  [DriftDetector] Trained (unsupervised) on {len(df):,} rows, "
+            logger.info(f"[DriftDetector] Trained (unsupervised) on {len(df):,} rows, "
                   f"{len(available)} features -- no label used.")
         except FileNotFoundError:
-            print(f"  [DriftDetector] {data_path} not found.")
+            logger.warning(f"[DriftDetector] {data_path} not found.")
         except Exception as e:
-            print(f"  [DriftDetector] Training failed: {e}")
+            logger.error(f"[DriftDetector] Training failed: {e}")
 
     def _encode(self, record: dict) -> dict:
         record = PostingFraudScorer._derive_features(record)

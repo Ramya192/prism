@@ -29,6 +29,9 @@ import pandas as pd
 from core.model_store import load_or_train
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ScamScorer:
@@ -63,9 +66,9 @@ class ScamScorer:
             available = [c for c in self.FEATURE_COLS if c in df.columns]
             missing = [c for c in self.FEATURE_COLS if c not in df.columns]
             if missing:
-                print(f"  [ScamScorer] Missing columns (will be ignored): {missing}")
+                logger.warning(f"[ScamScorer] Missing columns (will be ignored): {missing}")
             if not available:
-                print("  [ScamScorer] No usable feature columns found. Scorer disabled.")
+                logger.warning("[ScamScorer] No usable feature columns found. Scorer disabled.")
                 return
 
             X = df[available].copy()
@@ -83,13 +86,13 @@ class ScamScorer:
             self.model.fit(X_scaled, y)
             self.feature_cols = available
             self.trained = True
-            print(f"  [ScamScorer] Trained on {len(df):,} txns "
+            logger.info(f"[ScamScorer] Trained on {len(df):,} txns "
                   f"({y.sum()} scam, {y.mean():.2%} base rate)")
         except FileNotFoundError:
-            print(f"  [ScamScorer] {data_path} not found. "
+            logger.warning(f"[ScamScorer] {data_path} not found. "
                   f"Run domains/financial_services/data/prepare_data.py first.")
         except Exception as e:
-            print(f"  [ScamScorer] Training failed: {e}")
+            logger.error(f"[ScamScorer] Training failed: {e}")
 
     def score(self, record: dict) -> float:
         """Returns scam probability 0.0-1.0. Returns 0.5 (borderline) if
@@ -111,7 +114,7 @@ class ScamScorer:
             X_scaled = self.scaler.transform(X)
             return float(self.model.predict_proba(X_scaled)[0][1])
         except Exception as e:
-            print(f"  [ScamScorer] Scoring error: {e}")
+            logger.error(f"[ScamScorer] Scoring error: {e}")
             return 0.5
 
     def score_batch(self, df: pd.DataFrame):

@@ -5,6 +5,9 @@ import time
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from domains.banking.fraud.settings import OPENAI_API_KEY, MODEL_NAME
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class RoutingAgent:
@@ -77,12 +80,12 @@ class RoutingAgent:
                 return result
 
             except Exception as e:
-                print(f"  [RoutingAgent] Attempt {attempt}/{self.MAX_RETRIES} failed: {e}")
+                logger.warning(f"[RoutingAgent] Attempt {attempt}/{self.MAX_RETRIES} failed: {e}")
                 if attempt < self.MAX_RETRIES:
-                    print(f"  [RoutingAgent] Retrying in {self.RETRY_DELAY}s...")
+                    logger.info(f"[RoutingAgent] Retrying in {self.RETRY_DELAY}s...")
                     time.sleep(self.RETRY_DELAY)
                 else:
-                    print(f"  [RoutingAgent] All retries exhausted.")
+                    logger.error(f"[RoutingAgent] All retries exhausted.")
                     self.fraud_routes += 1
                     return (
                         "Department: FRAUD\n"

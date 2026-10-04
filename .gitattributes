@@ -5,3 +5,19 @@
 # directory" on Linux. Windows checkouts (core.autocrlf=true) would
 # otherwise silently convert this to CRLF on disk.
 *.sh text eol=lf
+
+# Source and config files: LF in the repo and in every checkout, whatever the
+# platform's core.autocrlf says -- removes the "LF will be replaced by CRLF"
+# warnings and mixed endings on Windows. Data files (CSV/TXT/JSON) and model
+# artifacts are deliberately NOT listed: model_store hashes the training CSVs
+# and reference-corpus ingest dedups on content hash, so their bytes are left
+# exactly as they are.
+*.py            text eol=lf
+*.yaml          text eol=lf
+*.yml           text eol=lf
+*.md            text eol=lf
+Dockerfile      text eol=lf
+.dockerignore   text eol=lf
+.gitignore      text eol=lf
+.gitattributes  text eol=lf
+.env.example    text eol=lf

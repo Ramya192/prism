@@ -29,6 +29,9 @@ from core.model_store import load_or_train
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class MLScorer:
@@ -64,10 +67,10 @@ class MLScorer:
             missing   = [c for c in self._requested_cols if c not in df.columns]
 
             if missing:
-                print(f"  [MLScorer] Missing columns (will be ignored): {missing}")
+                logger.warning(f"[MLScorer] Missing columns (will be ignored): {missing}")
 
             if not available:
-                print("  [MLScorer] No usable feature columns found. Scorer disabled.")
+                logger.warning("[MLScorer] No usable feature columns found. Scorer disabled.")
                 return
 
             X = df[available].fillna(0)
@@ -83,14 +86,14 @@ class MLScorer:
 
             self.feature_cols = available
             self.trained = True
-            print(f"  [MLScorer] Trained on {len(df):,} txns "
+            logger.info(f"[MLScorer] Trained on {len(df):,} txns "
                   f"({y.sum()} fraud, {y.mean():.4%} base rate)")
 
         except FileNotFoundError:
-            print(f"  [MLScorer] {data_path} not found. "
+            logger.warning(f"[MLScorer] {data_path} not found. "
                   f"Run domains/banking/fraud/data/prepare_data.py first.")
         except Exception as e:
-            print(f"  [MLScorer] Training failed: {e}")
+            logger.error(f"[MLScorer] Training failed: {e}")
 
     # ── Scoring ─────────────────────────────────────────────────────────
     def score(self, transaction: dict) -> float:
@@ -110,7 +113,7 @@ class MLScorer:
             return float(prob)
 
         except Exception as e:
-            print(f"  [MLScorer] Scoring error: {e}")
+            logger.error(f"[MLScorer] Scoring error: {e}")
             return 0.5   # default to borderline — let LLM decide
 
     def score_batch(self, df: pd.DataFrame) -> np.ndarray:

@@ -36,10 +36,14 @@
 
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
+from core.detection_layer import LLM_REASONING, ML_DETECTOR, RULE_ENGINE, parse_decided_by, tag_layer
 from domains.banking.fraud.settings import OPENAI_API_KEY, MODEL_NAME
 from domains.banking.fraud.tools.ml_scorer import MLScorer
 from domains.banking.fraud.tools.generalizable_scorer import GeneralizableScorer
 from domains.banking.fraud.tools.drift_detector import DriftDetector
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class FraudDetectorAgent:
@@ -54,11 +58,11 @@ class FraudDetectorAgent:
             api_key=OPENAI_API_KEY,
             temperature=0
         )
-        print("  [DetectorAgent] Loading ML scorer (tier 1: full trained schema)...")
+        logger.info("[DetectorAgent] Loading ML scorer (tier 1: full trained schema)...")
         self.scorer = MLScorer(data_path=data_path)
-        print("  [DetectorAgent] Loading ML scorer (tier 2: generalizable real-world schema)...")
+        logger.info("[DetectorAgent] Loading ML scorer (tier 2: generalizable real-world schema)...")
         self.scorer_generalizable = GeneralizableScorer()
-        print("  [DetectorAgent] Loading drift detector (unsupervised, tier 1 schema only)...")
+        logger.info("[DetectorAgent] Loading drift detector (unsupervised, tier 1 schema only)...")
         self.drift_detector = DriftDetector(data_path=data_path)
 
     # ── IMPROVEMENT 4: Robust response parser ───────────────────────────
@@ -121,6 +125,9 @@ class FraudDetectorAgent:
                 parts = line.split(":", 1)
                 if len(parts) == 2:
                     result["caveat"] = parts[1].strip()
+
+            elif (layer := parse_decided_by(line)):
+                result["decided_by"] = layer
 
         return result
 
@@ -309,9 +316,11 @@ class FraudDetectorAgent:
             - Exactly $0.00 transactions ALWAYS indicate card verification attacks
             - Amounts between $0.01 and $5.00 at hours 0-5 are suspicious
             - Transactions between midnight and 5am (hour 0-5) are HIGH RISK
-            - Amounts over $500 at unusual hours are suspicious
+            - Amounts over $500 during hours 0-5 (or hour 23) are suspicious
             - Legitimate transactions typically have amounts between $10-$500
             - Transactions at hour 23 (11pm) with amounts over $200 are suspicious
+            - Hours 6-22 are ordinary daytime/evening hours, NOT unusual hours: a
+              daytime hour is never a reason to flag by itself
 
             Historical context:
             {context_str}
@@ -321,6 +330,9 @@ class FraudDetectorAgent:
             - Amount: ${transaction['Amount']}
             - Hour of day: {transaction.get('hour', 'N/A')} (0=midnight, 23=11pm)
             - Time since first transaction: {transaction.get('Time', 'N/A')} seconds
+
+            Your Risk Level and Action must agree with your Reason: if the Reason says
+            the transaction looks legitimate or is not suspicious, answer LOW / APPROVE.
 
             Respond in EXACTLY this format (no extra text):
             Risk Level: <LOW/MEDIUM/HIGH>
@@ -333,6 +345,7 @@ class FraudDetectorAgent:
         self.cases_reviewed += 1
         tier = self.detect_tier(transaction)
         result = None
+        decided_by = None
 
         # Layer 1: Rules — deliberately independent of the ML tier (see
         # _normalize_for_rules): applies whenever a recognizable amount
@@ -343,20 +356,21 @@ class FraudDetectorAgent:
         if rule_txn is not None:
             rule_result = self.rule_based_filter(rule_txn)
             if rule_result:
-                result = rule_result
+                result, decided_by = rule_result, RULE_ENGINE
 
         # Layer 2: ML scorer — only for genuine tier1/tier2 schema matches
         ml_score = None
         if result is None and tier != "tier3":
             ml_result = self.ml_filter(transaction, tier)
             if ml_result:
-                result = ml_result
+                result, decided_by = ml_result, ML_DETECTOR
             else:
                 scorer = self.scorer if tier == "tier1" else self.scorer_generalizable
                 ml_score = scorer.score(transaction)
 
         # Layer 3: LLM — borderline tier1/tier2 cases, and all of tier3
         if result is None:
+            decided_by = LLM_REASONING
             try:
                 messages = [
                     SystemMessage(content="You are a bank fraud detection expert. Be concise and precise."),
@@ -365,8 +379,10 @@ class FraudDetectorAgent:
                 response = self.llm.invoke(messages)
                 result = response.content
             except Exception as e:
-                print(f"  [DetectorAgent ERROR] {e}")
+                logger.error(f"[DetectorAgent ERROR] {e}")
                 result = "Risk Level: MEDIUM\nReason: Analysis unavailable due to API error\nAction: FLAG"
+
+        result = tag_layer(result, decided_by)
 
         # Unsupervised drift/outlier caveat -- Tier 1 only. DriftDetector's
         # features are Tier 1's exact V1-V28+Amount+Time+hour schema;

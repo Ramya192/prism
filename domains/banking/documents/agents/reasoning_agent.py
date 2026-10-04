@@ -3,10 +3,12 @@
 # logic unchanged, import paths moved under domains.banking.documents.
 
 from core.rag.prompt_safety import UNTRUSTED_CONTEXT_NOTICE
+from core.rag.chat_history import render_history
 import json
 from pydantic import BaseModel, Field
 from typing import Optional
 
+from core.rag.reference_corpus import REFERENCE_SOURCE_ID
 from domains.banking.documents.settings import Settings
 
 
@@ -50,18 +52,7 @@ class ReasoningAgent:
 
     @staticmethod
     def _render_history(history: list[dict] | None) -> str:
-        """Renders prior conversation turns for the prompt -- including,
-        when the caller seeds it, the anomaly-scan verdict as the first
-        turn, so a follow-up like "why was this flagged?" can reference
-        the actual verdict already reached instead of the LLM re-deriving
-        one from scratch. Each turn: {"speaker": "user"|"assistant", "text": str}."""
-        if not history:
-            return ""
-        lines = ["Previous conversation on this same document (most recent last):"]
-        for turn in history:
-            speaker = "You" if turn.get("speaker") == "assistant" else "User"
-            lines.append(f"{speaker}: {turn.get('text', '')}")
-        return "\n".join(lines) + "\n"
+        return render_history(history)   # one copy for every domain: core/rag/chat_history.py
 
     def _build_prompt(
         self, query: str, chunks: list[dict], source_document: str | list[str] = None,
@@ -84,18 +75,27 @@ class ReasoningAgent:
             source_instruction = (
                 f'The "source_document" field should be the filename of whichever '
                 f'of these documents most directly backs your answer, one of: '
-                f'{", ".join(source_document)}.'
+                f'{", ".join(source_document)} (or "{REFERENCE_SOURCE_ID}" when the answer '
+                f'comes only from the reference corpus).'
             )
         else:
             actual_source = source_document or (
                 chunks[0].get("source", "unknown") if chunks else "unknown"
             )
             source_instruction = (
-                f'The "source_document" field MUST be exactly "{actual_source}". '
-                f'Do not change it or invent a different filename.'
+                f'The "source_document" field MUST be exactly "{actual_source}", '
+                f'unless the answer comes only from the reference corpus, in which case use '
+                f'"{REFERENCE_SOURCE_ID}". Do not invent a different filename.'
             )
         history_block = self._render_history(history)
-        return f"""You are a banking document analyst.
+        return f"""You are a banking document analyst and regulatory assistant.
+The context below can hold excerpts of the user's uploaded document AND excerpts of
+the bank's reference corpus (Source: {REFERENCE_SOURCE_ID} -- e.g. Regulation E, 12 CFR
+1005). Answer the question that was actually asked from whichever context is relevant.
+If it is a regulation, policy or rights question (liability limits, dispute deadlines,
+what a rule requires), answer it from the reference excerpts, cite the section number,
+and leave "transactions" as an empty list -- do not answer it with the uploaded
+document's transactions or with an earlier fraud verdict.
 {history_block}Use the context below to answer the question. If the question refers
 back to something in the previous conversation (e.g. "why was that flagged?",
 "which rule does that break?"), use that conversation to understand what

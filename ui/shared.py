@@ -73,7 +73,8 @@ def render_fraud_verdicts(verdicts: list[dict] | None, summary: dict | None) -> 
     for i, v in enumerate(verdicts, 1):
         if v["predicted"] == "FRAUD":
             reason = v.get("reason", "")
-            tier = _classify_detection_tier(reason, (v.get("parsed") or {}).get("action", ""))
+            parsed = v.get("parsed") or {}
+            tier = parsed.get("decided_by") or _classify_detection_tier(reason, parsed.get("action", ""))
             flagged.append((i, tier, reason))
 
     if not flagged:
@@ -98,12 +99,9 @@ def render_fraud_verdicts(verdicts: list[dict] | None, summary: dict | None) -> 
         by_text: dict[str, list[int]] = {}
         for i, text in caveat_records:
             by_text.setdefault(text, []).append(i)
-        with st.expander(
-            f"🔍 {len(caveat_records):,} record(s) also flagged as statistically unusual "
-            "(unsupervised check, independent of the verdict above)"
-        ):
+        with st.expander(f"🔍 {len(caveat_records):,} record(s) also flagged as statistically unusual"):
             for text, rows in by_text.items():
-                st.caption(md_safe(text))
+                st.caption(md_safe(text[:1].upper() + text[1:]))
                 if numbered:
                     shown = ", ".join(f"#{i}" for i in rows[:20])
                     more = f" … and {len(rows) - 20:,} more" if len(rows) > 20 else ""
@@ -137,7 +135,8 @@ def _layer_summary(flagged: list[tuple[int, str, str]]) -> list[str]:
     for i, _, reason in rules:
         by_reason.setdefault(reason, []).append(i)
     for reason, ids in sorted(by_reason.items(), key=lambda kv: -len(kv[1]))[:GROUPS_SHOWN]:
-        lines.append(f"📏 **Rule Engine** — {reason} · {len(ids):,} records (e.g. {_rows(ids)})")
+        noun = "record" if len(ids) == 1 else "records"
+        lines.append(f"📏 **Rule Engine** — {reason} · {len(ids):,} {noun} (e.g. {_rows(ids)})")
     if len(by_reason) > GROUPS_SHOWN:
         lines.append(f"📏 **Rule Engine** — {len(by_reason) - GROUPS_SHOWN} other rule(s) in the full list")
 
@@ -204,13 +203,14 @@ def _classify_detection_tier(reason: str, action: str) -> str:
     return "LLM Reasoning"
 
 
-def render_explainability(flagged: bool, action: str, reason: str) -> None:
+def render_explainability(flagged: bool, action: str, reason: str, decided_by: str | None = None) -> None:
     """"WHY WAS THIS FLAGGED?" — names which of Rules/ML/LLM actually
     produced this verdict's reason, instead of presenting the pipeline
-    as one opaque black box."""
+    as one opaque black box. `decided_by` is the layer the detector
+    recorded; without it (domains that don't yet) the tier is inferred."""
     if not reason:
         return
-    tier = _classify_detection_tier(reason, action)
+    tier = decided_by or _classify_detection_tier(reason, action)
     icon = {"Rule Engine": "📏", "ML Detector": "🧠", "LLM Reasoning": "💬"}.get(tier, "💬")
     title = "WHY WAS THIS FLAGGED?" if flagged else "WHY THIS LOOKS CLEAN"
     st.markdown(
@@ -247,7 +247,7 @@ def render_verdict_result(result: dict) -> None:
             "<span>✓ Explanation</span></div>",
             unsafe_allow_html=True,
         )
-        render_explainability(flagged, action, reason)
+        render_explainability(flagged, action, reason, parsed.get("decided_by"))
     with st.expander("Detector report"):
         st.text(f"Risk Level : {risk_level}")
         st.text(f"Action     : {action}")
@@ -461,14 +461,13 @@ def render_chat_panel(domain_id: str, pipeline, doc_key: str, history_key: str) 
         reason = data.get("flag_reason") or data.get("anomaly_reason")
         if flagged:
             st.warning(md_safe(f"⚠ {reason}"))
-        if data.get("transactions") is not None:
+        if data.get("transactions"):   # empty for a regulation/policy answer -- no transaction card then
             c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Transactions", len(data.get("transactions", [])))
+            c1.metric("Transactions", len(data["transactions"]))
             c2.metric("Total", f"${data['total_amount']:,.2f}" if data.get("total_amount") is not None else "—")
             c3.metric("Confidence", f"{data.get('confidence', 0) * 100:.0f}%")
             c4.metric("Source", data.get("source_document", "—"))
-            if data["transactions"]:
-                st.dataframe(pd.DataFrame(data["transactions"]), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(data["transactions"]), use_container_width=True, hide_index=True)
         evaluation = result.get("evaluation")
         if evaluation:
             with st.expander("RAG evaluation"):

@@ -32,8 +32,12 @@ import os
 
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
+from core.detection_layer import LLM_REASONING, ML_DETECTOR, RULE_ENGINE, parse_decided_by, tag_layer
 from domains.payroll_hr.hr.settings import Settings
 from domains.payroll_hr.hr.tools.posting_scorer import PostingFraudScorer
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class HrDetectorAgent:
@@ -44,7 +48,7 @@ class HrDetectorAgent:
         self.name = name
         self.cases_reviewed = 0
         self.llm = ChatOpenAI(model=Settings.OPENAI_MODEL, api_key=os.getenv("OPENAI_API_KEY"), temperature=0)
-        print("  [HrDetectorAgent] Loading ML posting scorer...")
+        logger.info("[HrDetectorAgent] Loading ML posting scorer...")
         self.scorer = PostingFraudScorer(data_path=data_path)
 
     @staticmethod
@@ -70,6 +74,8 @@ class HrDetectorAgent:
                 parts = line.split(":", 1)
                 if len(parts) == 2:
                     result["reason"] = parts[1].strip()
+            elif (layer := parse_decided_by(line)):
+                result["decided_by"] = layer
         return result
 
     @staticmethod
@@ -193,11 +199,11 @@ class HrDetectorAgent:
         if recognizable:
             rule_result = self.rule_based_filter(posting)
             if rule_result:
-                return rule_result
+                return tag_layer(rule_result, RULE_ENGINE)
 
             ml_result = self.ml_filter(posting)
             if ml_result:
-                return ml_result
+                return tag_layer(ml_result, ML_DETECTOR)
 
             ml_score = self.scorer.score(posting)
 
@@ -207,10 +213,10 @@ class HrDetectorAgent:
                 HumanMessage(content=self.build_prompt(posting, context, ml_score)),
             ]
             response = self.llm.invoke(messages)
-            return response.content
+            return tag_layer(response.content, LLM_REASONING)
         except Exception as e:
-            print(f"  [HrDetectorAgent ERROR] {e}")
-            return "Risk Level: MEDIUM\nReason: Analysis unavailable due to API error\nAction: FLAG"
+            logger.error(f"[HrDetectorAgent ERROR] {e}")
+            return tag_layer("Risk Level: MEDIUM\nReason: Analysis unavailable due to API error\nAction: FLAG", LLM_REASONING)
 
     def status(self):
         print(f"{self.name} has reviewed {self.cases_reviewed} postings")

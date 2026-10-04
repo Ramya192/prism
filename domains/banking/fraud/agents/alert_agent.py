@@ -5,6 +5,9 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from domains.banking.fraud.settings import OPENAI_API_KEY, MODEL_NAME
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 class AlertAgent:
 
@@ -53,7 +56,7 @@ class AlertAgent:
             return response.content
 
         except Exception as e:
-            print(f"  [AlertAgent ERROR] {e}")
+            logger.error(f"[AlertAgent ERROR] {e}")
             return f"ALERT: Transaction of ${transaction['Amount']} flagged for manual review\nAction: ESCALATE TO HUMAN ANALYST"
 
     def status(self):

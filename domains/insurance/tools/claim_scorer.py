@@ -26,6 +26,9 @@ import pandas as pd
 from core.model_store import load_or_train
 from lightgbm import LGBMClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ClaimFraudScorer:
@@ -60,9 +63,9 @@ class ClaimFraudScorer:
             available = [c for c in self.FEATURE_COLS if c in df.columns]
             missing = [c for c in self.FEATURE_COLS if c not in df.columns]
             if missing:
-                print(f"  [ClaimFraudScorer] Missing columns (will be ignored): {missing}")
+                logger.warning(f"[ClaimFraudScorer] Missing columns (will be ignored): {missing}")
             if not available:
-                print("  [ClaimFraudScorer] No usable feature columns found. Scorer disabled.")
+                logger.warning("[ClaimFraudScorer] No usable feature columns found. Scorer disabled.")
                 return
 
             X = df[available].copy()
@@ -80,13 +83,13 @@ class ClaimFraudScorer:
             self.model.fit(X_scaled, y)
             self.feature_cols = available
             self.trained = True
-            print(f"  [ClaimFraudScorer] Trained on {len(df):,} claims "
+            logger.info(f"[ClaimFraudScorer] Trained on {len(df):,} claims "
                   f"({y.sum()} fraud, {y.mean():.2%} base rate)")
         except FileNotFoundError:
-            print(f"  [ClaimFraudScorer] {data_path} not found. "
+            logger.warning(f"[ClaimFraudScorer] {data_path} not found. "
                   f"Run domains/insurance/data/prepare_data.py first.")
         except Exception as e:
-            print(f"  [ClaimFraudScorer] Training failed: {e}")
+            logger.error(f"[ClaimFraudScorer] Training failed: {e}")
 
     def score(self, claim: dict) -> float:
         if not self.trained:
@@ -106,7 +109,7 @@ class ClaimFraudScorer:
             X_scaled = self.scaler.transform(X)
             return float(self.model.predict_proba(X_scaled)[0][1])
         except Exception as e:
-            print(f"  [ClaimFraudScorer] Scoring error: {e}")
+            logger.error(f"[ClaimFraudScorer] Scoring error: {e}")
             return 0.5
 
     def score_batch(self, df: pd.DataFrame):

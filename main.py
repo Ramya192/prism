@@ -17,8 +17,11 @@ from pathlib import Path
 import pandas as pd
 
 from core.config_loader import ConfigLoader
+from core.logging_setup import configure_logging
 from core.orchestrator import AgentOrchestrator
 from domains.banking.fraud.pipeline import FraudPipeline
+
+configure_logging()
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")

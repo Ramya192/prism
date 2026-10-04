@@ -90,5 +90,23 @@ def test_identical_drift_notes_are_listed_once():
     labels = [e.label for e in at.expander]
     assert any("10 record(s) also flagged as statistically unusual" in label for label in labels)
     captions = [c.value for c in at.caption]
-    assert captions.count("looks statistically unusual") == 1
+    assert captions.count("Looks statistically unusual") == 1        # sentence-cased, listed once
     assert any(c.startswith("Records: #1, #2") for c in captions)
+
+
+def test_recorded_deciding_layer_beats_the_reason_text_heuristic():
+    # An LLM verdict can be a short BLOCK with no percentage -- exactly what the
+    # text heuristic takes for a rule hit. The detector's own record wins.
+    def v(decided_by):
+        parsed = {"action": "BLOCK", "reason": "Looks like card testing.", "decided_by": decided_by}
+        return {"predicted": "FRAUD", "reason": parsed["reason"], "parsed": parsed}
+    at = _run([v("LLM Reasoning") for _ in range(6)])
+    assert [m.label for m in at.metric] == ["LLM Reasoning"]
+    at = _run([{"predicted": "FRAUD", "reason": "Looks like card testing.",
+                "parsed": {"action": "BLOCK", "reason": "Looks like card testing."}} for _ in range(6)])
+    assert [m.label for m in at.metric] == ["Rule Engine"]        # no record -> old inference
+
+
+def test_single_record_group_is_not_pluralised():
+    lines = _layer_summary([(333, "Rule Engine", "Zero-dollar")])
+    assert "1 record (e.g. #333)" in lines[0] and "1 records" not in lines[0]

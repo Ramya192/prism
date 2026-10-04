@@ -32,9 +32,13 @@ import os
 
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
+from core.detection_layer import LLM_REASONING, ML_DETECTOR, RULE_ENGINE, parse_decided_by, tag_layer
 from domains.insurance.settings import Settings
 from domains.insurance.tools.claim_scorer import ClaimFraudScorer
 from domains.insurance.tools.generalizable_scorer import ClaimGeneralizableScorer
+import logging
+
+logger = logging.getLogger(__name__)
 
 RULE_TOLERANCE = 0.01
 
@@ -47,9 +51,9 @@ class HealthcareDetectorAgent:
         self.name = name
         self.cases_reviewed = 0
         self.llm = ChatOpenAI(model=Settings.OPENAI_MODEL, api_key=os.getenv("OPENAI_API_KEY"), temperature=0)
-        print("  [HealthcareDetectorAgent] Loading ML scorer (tier 1: Claim_Amount/Approved_Amount schema)...")
+        logger.info("[HealthcareDetectorAgent] Loading ML scorer (tier 1: Claim_Amount/Approved_Amount schema)...")
         self.scorer = ClaimFraudScorer(data_path=data_path)
-        print("  [HealthcareDetectorAgent] Loading ML scorer (tier 2: Policy_Number/distance schema)...")
+        logger.info("[HealthcareDetectorAgent] Loading ML scorer (tier 2: Policy_Number/distance schema)...")
         self.scorer_generalizable = ClaimGeneralizableScorer()
 
     @staticmethod
@@ -75,6 +79,8 @@ class HealthcareDetectorAgent:
                 parts = line.split(":", 1)
                 if len(parts) == 2:
                     result["reason"] = parts[1].strip()
+            elif (layer := parse_decided_by(line)):
+                result["decided_by"] = layer
         return result
 
     @staticmethod
@@ -300,11 +306,11 @@ class HealthcareDetectorAgent:
         if tier != "tier3":
             rule_result = self.rule_based_filter(claim, tier)
             if rule_result:
-                return rule_result
+                return tag_layer(rule_result, RULE_ENGINE)
 
             ml_result = self.ml_filter(claim, tier)
             if ml_result:
-                return ml_result
+                return tag_layer(ml_result, ML_DETECTOR)
 
             scorer = self.scorer if tier == "tier1" else self.scorer_generalizable
             ml_score = scorer.score(claim)
@@ -315,10 +321,10 @@ class HealthcareDetectorAgent:
                 HumanMessage(content=self.build_prompt(claim, context, ml_score, tier)),
             ]
             response = self.llm.invoke(messages)
-            return response.content
+            return tag_layer(response.content, LLM_REASONING)
         except Exception as e:
-            print(f"  [HealthcareDetectorAgent ERROR] {e}")
-            return "Risk Level: MEDIUM\nReason: Analysis unavailable due to API error\nAction: FLAG"
+            logger.error(f"[HealthcareDetectorAgent ERROR] {e}")
+            return tag_layer("Risk Level: MEDIUM\nReason: Analysis unavailable due to API error\nAction: FLAG", LLM_REASONING)
 
     def status(self):
         print(f"{self.name} has reviewed {self.cases_reviewed} claims")

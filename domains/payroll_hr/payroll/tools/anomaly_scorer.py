@@ -29,6 +29,9 @@ import pandas as pd
 from core.model_store import load_or_train
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class PayrollAnomalyScorer:
@@ -54,9 +57,9 @@ class PayrollAnomalyScorer:
             available = [c for c in self.FEATURE_COLS if c in df.columns]
             missing = [c for c in self.FEATURE_COLS if c not in df.columns]
             if missing:
-                print(f"  [PayrollAnomalyScorer] Missing columns (will be ignored): {missing}")
+                logger.warning(f"[PayrollAnomalyScorer] Missing columns (will be ignored): {missing}")
             if not available:
-                print("  [PayrollAnomalyScorer] No usable feature columns found. Scorer disabled.")
+                logger.warning("[PayrollAnomalyScorer] No usable feature columns found. Scorer disabled.")
                 return
 
             X = df[available].fillna(0)
@@ -70,13 +73,13 @@ class PayrollAnomalyScorer:
             self.model.fit(X_scaled, y)
             self.feature_cols = available
             self.trained = True
-            print(f"  [PayrollAnomalyScorer] Trained on {len(df):,} rows "
+            logger.info(f"[PayrollAnomalyScorer] Trained on {len(df):,} rows "
                   f"({y.sum()} flagged, {y.mean():.1%} base rate)")
         except FileNotFoundError:
-            print(f"  [PayrollAnomalyScorer] {data_path} not found. "
+            logger.warning(f"[PayrollAnomalyScorer] {data_path} not found. "
                   f"Run domains/payroll_hr/payroll/data/prepare_tier_ml_data.py first.")
         except Exception as e:
-            print(f"  [PayrollAnomalyScorer] Training failed: {e}")
+            logger.error(f"[PayrollAnomalyScorer] Training failed: {e}")
 
     def score(self, record: dict) -> float:
         if not self.trained:
@@ -87,7 +90,7 @@ class PayrollAnomalyScorer:
             X_scaled = self.scaler.transform(X)
             return float(self.model.predict_proba(X_scaled)[0][1])
         except Exception as e:
-            print(f"  [PayrollAnomalyScorer] Scoring error: {e}")
+            logger.error(f"[PayrollAnomalyScorer] Scoring error: {e}")
             return 0.5
 
     def score_batch(self, df: pd.DataFrame):

@@ -17,6 +17,7 @@
 # every field a record actually has into the prompt.
 
 from core.rag.prompt_safety import UNTRUSTED_CONTEXT_NOTICE
+from core.rag.chat_history import render_history
 import json
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -60,13 +61,7 @@ class ReasoningAgent:
 
     @staticmethod
     def _render_history(history: list[dict] | None) -> str:
-        if not history:
-            return ""
-        lines = ["Previous conversation on this same document (most recent last):"]
-        for turn in history:
-            speaker = "You" if turn.get("speaker") == "assistant" else "User"
-            lines.append(f"{speaker}: {turn.get('text', '')}")
-        return "\n".join(lines) + "\n"
+        return render_history(history)   # one copy for every domain: core/rag/chat_history.py
 
     def _build_prompt(
         self, query: str, chunks: list[dict], source_document: str | list[str] = None,
