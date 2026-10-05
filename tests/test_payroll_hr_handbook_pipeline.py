@@ -89,7 +89,7 @@ class TestHandbookIngest:
         the handbook, not a fraud-verdict message at all."""
         seed = ingest_response["seed_history"]
         assert len(seed) == 2
-        assert seed[0]["text"] == HANDBOOK_QUERY
+        assert seed[0]["text"].endswith(HANDBOOK_QUERY)   # prefixed with the document label
         assert len(seed[1]["text"].strip()) > 0
 
     def test_followup_chat_answers_from_real_handbook_content(self, pipeline, ingest_response):

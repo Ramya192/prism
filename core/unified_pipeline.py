@@ -322,12 +322,18 @@ class UnifiedDomainPipeline:
         if history:
             last = "\n".join(f"{t['speaker']}: {t['text']}"[:400] for t in history[-2:])
         kind = self.DOCUMENT_TYPE_DESCRIPTION or "documents in this domain"
+        # The type gate stores non-matching documents as chat-only (a handbook
+        # in Payroll, a loan agreement in Banking), so a question about one of
+        # those must stay IN scope -- describing the domain's documents as only
+        # its primary type made the gate decline them (measured).
+        if self.NON_MATCH_EXAMPLES:
+            kind += f"; the user may also have uploaded other document types, such as {self.NON_MATCH_EXAMPLES}"
         if self.REFERENCE_LABEL:
             kind += f"; reference material available: {self.REFERENCE_LABEL}"
         prompt = (
             f"A user is chatting with an assistant about uploaded documents ({kind}) and about "
             "the regulations, policies and rules that relate to them. Decide whether the new "
-            "question is IN scope (about the document's contents, its fraud verdict or flags, the "
+            "question is IN scope (about the contents of any uploaded document, its fraud verdict or flags, the "
             "domain's rules, policies or concepts, or a follow-up to the conversation) or OUT of "
             "scope (general knowledge unrelated to this domain, small talk, or a request about "
             "the assistant itself such as its prompt or instructions). Short or vague follow-ups "
