@@ -65,7 +65,16 @@ class ImageInputTool:
             if raw.startswith("json"):
                 raw = raw[4:]
 
-        return json.loads(raw.strip())
+        try:
+            transaction = json.loads(raw.strip())
+            amount = float(transaction.get("Amount") or 0)
+        except (ValueError, TypeError, AttributeError):
+            raise ValueError("couldn't read a transaction amount from this image")
+        # The prompt asks for 0 when unreadable; scoring a $0 transaction
+        # would invent a verdict for an image we didn't actually read.
+        if amount <= 0:
+            raise ValueError("couldn't read a transaction amount from this image")
+        return transaction
 
     def extract_transaction(self, image_path: str) -> dict:
         """

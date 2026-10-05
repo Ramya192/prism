@@ -6,6 +6,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from domains.banking.fraud.settings import OPENAI_API_KEY, MODEL_NAME
 from datetime import datetime
 import logging
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,8 @@ class AlertAgent:
     def generate_alert(self, transaction, detector_response, analyst_response):
         self.alerts_generated += 1
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        # Generated here, not by the LLM: at temperature 0 it returns the same "random" number every time.
+        alert_id = random.randint(10_000_000, 99_999_999)
 
         try:
             prompt = f"""
@@ -38,7 +41,7 @@ class AlertAgent:
                 Analyst Investigation: {analyst_response}
 
                 Generate a formal bank alert exactly in this format:
-                ALERT ID: <generate a randon 8- digit number>
+                ALERT ID: {alert_id}
                 TIMESTAMP: {timestamp}
                 SEVERITY: <CRITICAL/HIGH/MEDIUM>
                 TRANSACTION AMOUNT: ${transaction["Amount"]}

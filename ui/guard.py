@@ -152,5 +152,5 @@ def describe_ingest_error(e: Exception) -> str:
     if "RateLimit" in name or "APIConnection" in name or "Timeout" in name or "Authentication" in name:
         return ("The AI service couldn't be reached or rejected the request "
                 f"({name}). Please try again in a moment.")
-    return (f"Couldn't process this file ({name}). It may be corrupt, password-protected, "
+    return ("Couldn't process this file. It may be corrupt, password-protected, "
             "or not the kind of document this domain handles.")

@@ -16,7 +16,7 @@
 # see FintechDetectorAgent.build_prompt()'s tier3 branch, which renders
 # every field a record actually has into the prompt.
 
-from core.rag.prompt_safety import UNTRUSTED_CONTEXT_NOTICE
+from core.rag.prompt_safety import UNTRUSTED_CONTEXT_NOTICE, wrap_untrusted
 from core.rag.chat_history import render_history
 import json
 from pydantic import BaseModel, Field
@@ -112,8 +112,11 @@ currency symbol.
 
 {UNTRUSTED_CONTEXT_NOTICE}
 
-Context:
-{context}
+{wrap_untrusted(context)}
+
+If the question cannot be answered from the context above (it is unrelated to the
+uploaded document and the reference corpus), say so plainly in "answer", leave the
+list empty, set "source_document" to "none", and do not summarise the document instead.
 
 Question: {query}
 

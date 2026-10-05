@@ -77,13 +77,17 @@ DOCUMENT_CONTEXT = (
     "deposits, rent, and ATM withdrawals in the thousands to tens of "
     "thousands of dollars -- a large amount alone is NOT unusual here the "
     "way it would be for a card transaction. Judge suspicion from pattern "
-    "(timing, duplication, round-tripping), not amount size alone."
+    "(timing, duplication, round-tripping), not amount size alone. The exception "
+    "is cash: ATM withdrawals are normally limited to a few thousand dollars a day, "
+    "so an ATM withdrawal of tens of thousands, or several large ones, is unusual "
+    "whatever the account's size."
 )
 
 
 class BankingPipeline(UnifiedDomainPipeline):
     EXTRACTION_QUERY = EXTRACTION_QUERY
     DOCUMENT_SCORING_CONTEXT = DOCUMENT_CONTEXT
+    REFERENCE_LABEL = "Regulation E (12 CFR 1005)"   # named in the chat scope check (core/unified_pipeline.py)
     DOCUMENT_TYPE_DESCRIPTION = (
         "a bank account statement -- a dated list of one account's transactions "
         "(deposits, withdrawals, payments)"
@@ -133,7 +137,17 @@ class BankingPipeline(UnifiedDomainPipeline):
         # this is a neutral placeholder purely to satisfy AnalystAgent's
         # investigation prompt (only reached on a FRAUD verdict), not a
         # value detect_tier()/rules logic gives any weight to.
-        return [{"Amount": t.amount, "hour": 12, "Time": 0} for t in extraction.transactions]
+        # Date/Type/Description ride along as plain fields: rules and ML
+        # ignore them, but the Tier 3 LLM prompt renders every field, and
+        # with only Amount it could not tell a $60,000 ATM withdrawal from
+        # a $60,000 rent payment (measured: both scored clean).
+        return [
+            {
+                "Amount": t.amount, "hour": 12, "Time": 0,
+                "Date": t.date, "Type": t.type, "Description": t.description or "",
+            }
+            for t in extraction.transactions
+        ]
 
     def extract_from_image(self, image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
         """Passthrough -- Banking's existing receipt/cheque image-input

@@ -47,6 +47,7 @@ EXTRACTION_QUERY = (
 
 class InsurancePipeline(UnifiedDomainPipeline):
     EXTRACTION_QUERY = EXTRACTION_QUERY
+    REFERENCE_LABEL = "CMS Claims Manual, Ch. 26"   # named in the chat scope check (core/unified_pipeline.py)
     DOCUMENT_TYPE_DESCRIPTION = (
         "a specific insurance claim or explanation-of-benefits (EOB) document stating the "
         "billed and approved amounts for one patient's visit or service"

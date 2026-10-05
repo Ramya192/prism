@@ -189,11 +189,12 @@ Respond ONLY with a JSON object, no other text:
         chunks: list[dict],
         answer: str,
         source_document: str = None,
+        history_context: list[str] | None = None,
     ) -> EvaluationResult:
         start = time.time()
 
         ctx_rel = self._context_precision(query, chunks)
-        faith = self._faithfulness(answer, chunks)
+        faith = self._faithfulness(answer, chunks, history_context)
         ans_rel = self._answer_relevancy(query, answer)
 
         latency_ms = int((time.time() - start) * 1000)
@@ -255,11 +256,17 @@ class RAGASEvaluator:
         chunks: list[dict],
         answer: str,
         source_document: str = None,
+        history_context: list[str] | None = None,
     ) -> EvaluationResult:
         from datasets import Dataset
 
         start = time.time()
-        contexts = [c.get("text", "") for c in chunks]
+        # A follow-up like "why was that flagged?" is answered from the
+        # seeded verdict in chat history, which retrieval never returns, so
+        # judging faithfulness against chunks alone scored a correct answer
+        # 0.0 (measured). history_context carries the earlier assistant
+        # turns the model was actually shown, for faithfulness only.
+        contexts = [c.get("text", "") for c in chunks] + list(history_context or [])
 
         # Stopwords excluded from the overlap check below -- without this,
         # "what"/"is"/"the" alone were enough to match query "what are large
@@ -280,7 +287,9 @@ class RAGASEvaluator:
             return {w.strip("?.,!") for w in text.lower().split()} - _STOPWORDS
 
         ground_truth_answer = ""
-        if source_document and source_document in self.ground_truth:
+        # source_document is a list when several documents are active; ground
+        # truth is keyed per single document, so only a str can match.
+        if isinstance(source_document, str) and source_document in self.ground_truth:
             query_words = _significant_words(query)
             best_overlap = 0
             for pair in self.ground_truth[source_document]["qa_pairs"]:

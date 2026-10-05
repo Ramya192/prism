@@ -13,7 +13,7 @@
 # rather than duplicated per domain.
 
 
-def build_seed_history(auto_query: str, scan: dict) -> list[dict]:
+def build_seed_history(auto_query: str, scan: dict, document: str | None = None) -> list[dict]:
     if scan.get("status") != "valid":
         return []
     data = scan["data"]
@@ -22,7 +22,10 @@ def build_seed_history(auto_query: str, scan: dict) -> list[dict]:
     verdict_text = (
         f"⚠ Flagged: {reason}" if flagged else "No anomalies found — this looks consistent."
     )
+    # With several documents loaded, a bare verdict turn can't say which
+    # file it belongs to, so a follow-up got anchored to the wrong one.
+    label = f"[{document}] " if document else ""
     return [
-        {"speaker": "user", "text": auto_query},
-        {"speaker": "assistant", "text": f"{data.get('answer', '')} {verdict_text}".strip()},
+        {"speaker": "user", "text": f"{label}{auto_query}"},
+        {"speaker": "assistant", "text": f"{label}{data.get('answer', '')} {verdict_text}".strip()},
     ]

@@ -66,3 +66,24 @@ class TestBuildSeedHistory:
         scan = {"status": "valid", "data": {"answer": "3 transactions found.", "anomaly_flag": True, "anomaly_reason": "duplicate charge"}}
         seed = build_seed_history("scan for anomalies", scan)
         assert "⚠ Flagged: duplicate charge" in seed[1]["text"]
+
+
+class TestDocumentTaggedSeed:
+    def test_seed_turns_name_their_document(self):
+        scan = {"status": "valid", "data": {"answer": "5 transactions.", "flag": False, "flag_reason": None}}
+        seed = build_seed_history("scan", scan, document="march.pdf")
+        assert seed[0]["text"].startswith("[march.pdf] ")
+        assert seed[1]["text"].startswith("[march.pdf] ")
+        assert "No anomalies found" in seed[1]["text"]
+
+    def test_untagged_seed_is_unchanged(self):
+        scan = {"status": "valid", "data": {"answer": "x", "flag": False, "flag_reason": None}}
+        assert build_seed_history("scan", scan)[0] == {"speaker": "user", "text": "scan"}
+
+
+class TestPayrollPolicyQuestions:
+    def test_prompt_routes_policy_questions_to_reference_corpus(self):
+        from core.rag.reference_corpus import REFERENCE_SOURCE_ID
+        prompt = PayrollReasoningAgent()._build_prompt("how are bonuses withheld?", [], "slip.pdf", None)
+        assert "policy, regulation or rules question" in prompt
+        assert f'"{REFERENCE_SOURCE_ID}"' in prompt

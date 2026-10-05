@@ -46,6 +46,25 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+
+def _hour_label(hour) -> str:
+    """Spell the 24h hour out (e.g. "11 = 11am, daytime") so the LLM never
+    has to convert it -- it was misreading 11 as 11pm."""
+    try:
+        h = int(float(hour))
+    except (TypeError, ValueError):
+        return "N/A"
+    if not 0 <= h <= 23:
+        return str(hour)
+    clock = f"{h % 12 or 12}{'am' if h < 12 else 'pm'}"
+    if h <= 5:
+        part = "overnight, hours 0-5"
+    elif h == 23:
+        part = "late night"
+    else:
+        part = "ordinary daytime/evening"
+    return f"{h} on a 24-hour clock = {clock}, {part}"
+
 class FraudDetectorAgent:
 
     VALID_RISK_LEVELS = {"LOW", "MEDIUM", "HIGH"}
@@ -193,10 +212,29 @@ class FraudDetectorAgent:
         defaulting a truly-missing amount to 0 would wrongly trip the
         zero-dollar rule."""
         if "Amount" in transaction:
-            return transaction
-        if "Transaction_Amount" in transaction:
-            return {"Amount": transaction["Transaction_Amount"], "hour": transaction.get("hour", 12)}
-        return None
+            raw_amount = transaction["Amount"]
+        elif "Transaction_Amount" in transaction:
+            raw_amount = transaction["Transaction_Amount"]
+        else:
+            return None
+        # A CSV can carry text, blanks or NaN in a numeric column; comparing
+        # those to numbers crashed the whole ingest (measured). An amount or
+        # hour that isn't a real number skips the rules and falls to the
+        # later layers instead.
+        try:
+            amount = float(raw_amount)
+            hour = float(transaction.get("hour", 12))
+        except (TypeError, ValueError):
+            return None
+        if amount != amount or hour != hour:   # NaN
+            return None
+        if "Amount" in transaction:
+            normalized = dict(transaction)   # Tier 1 shape: the record itself, numbers coerced
+            normalized["Amount"] = amount
+            if "hour" in transaction:
+                normalized["hour"] = hour
+            return normalized
+        return {"Amount": amount, "hour": hour}
 
     # ── LAYER 2: ML fast-path ────────────────────────────────────────────
     def ml_filter(self, transaction, tier="tier1"):
@@ -229,24 +267,50 @@ class FraudDetectorAgent:
         context_str = context if context else "No historical context available"
 
         if tier == "tier3":
-            # No "Amount" at all -- rules and both ML scorers need one, so
-            # neither ran. Nothing to weigh a score against; render
-            # whatever fields this transaction actually has and let the
-            # LLM reason from first principles instead of a fixed rubric
-            # that assumes fields that aren't there.
-            fields = "\n".join(f"- {k}: {v}" for k, v in transaction.items()) or "(no fields provided)"
+            # Doesn't match either ML schema (e.g. a bare Amount/hour manual
+            # entry, or no amount at all), so no ML score exists to weigh.
+            # Render whatever fields this transaction actually has and let
+            # the LLM reason from first principles instead of a fixed rubric
+            # that assumes fields that aren't there. The one exception is
+            # time of day: if an hour is present, spell it out and give the
+            # same night-hours guidance Tier 1 uses, since the model has no
+            # other way to know hour 3 is overnight.
+            fields = "\n".join(
+                f"- {k}: {_hour_label(v) if k == 'hour' else v}"
+                for k, v in transaction.items()
+            ) or "(no fields provided)"
+            hour_guidance = ""
+            if "hour" in transaction and _hour_label(transaction["hour"]) != "N/A":
+                hour_guidance = """
+                Time-of-day guidance (applies only if an amount is shown):
+                - Hours 0-5 (midnight to 5am) are high risk: an overnight
+                  transaction is suspicious even for a modest amount
+                - Exactly hour 23 (11pm) is suspicious only for amounts over $200
+                - Hours 6-22 (6am to 10pm) are ordinary daytime/evening hours,
+                  with no amount threshold: the hour is never a reason to flag
+                  by itself
+                """
             return f"""
                 You are a fraud detection expert at a bank.
-                This input doesn't match any known transaction schema (no
-                recognizable amount field), so no rule-based or ML score
-                could be computed. Use your own judgement about what's
-                shown below.
+                This input doesn't match any known transaction schema, so no
+                ML score could be computed. Use your own judgement about
+                what's shown below.
 
                 Historical context:
                 {context_str}
 
                 Transaction details (exactly as provided):
                 {fields}
+                {hour_guidance}
+
+                Typical ranges in the historical context are background, not
+                rules: an amount above or below them is not suspicious on its
+                own. Your Risk Level and Action must agree with your Reason --
+                decide first whether anything above is actually suspicious. If
+                so, give MEDIUM or HIGH with FLAG or BLOCK and a Reason naming
+                the suspicious signal; if not, give LOW / APPROVE and a Reason
+                saying nothing suspicious was found. Never write a Reason that
+                lists a concern and then approve.
 
                 Respond in EXACTLY this format (no extra text):
                 Risk Level: <LOW/MEDIUM/HIGH>
@@ -299,7 +363,16 @@ class FraudDetectorAgent:
                 - Account age (days): {transaction.get('Account_Age', 'N/A')}
                 - Credit score: {transaction.get('Credit_Score', 'N/A')}
                 - Previous fraud on this customer: {transaction.get('Previous_Fraud', 'N/A')}
-                - Hour of day: {transaction.get('hour', 'N/A')} (0=midnight, 23=11pm)
+                - Hour of day: {_hour_label(transaction.get('hour'))}
+
+                Typical ranges in the historical context are background, not
+                rules: an amount above or below them is not suspicious on its
+                own. Your Risk Level and Action must agree with your Reason --
+                decide first whether anything above is actually suspicious. If
+                so, give MEDIUM or HIGH with FLAG or BLOCK and a Reason naming
+                the suspicious signal; if not, give LOW / APPROVE and a Reason
+                saying nothing suspicious was found. Never write a Reason that
+                lists a concern and then approve.
 
                 Respond in EXACTLY this format (no extra text):
                 Risk Level: <LOW/MEDIUM/HIGH>
@@ -328,7 +401,7 @@ class FraudDetectorAgent:
 
             Transaction details:
             - Amount: ${transaction['Amount']}
-            - Hour of day: {transaction.get('hour', 'N/A')} (0=midnight, 23=11pm)
+            - Hour of day: {_hour_label(transaction.get('hour'))}
             - Time since first transaction: {transaction.get('Time', 'N/A')} seconds
 
             Your Risk Level and Action must agree with your Reason: if the Reason says

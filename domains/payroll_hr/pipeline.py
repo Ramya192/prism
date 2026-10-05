@@ -154,6 +154,7 @@ class PayrollHrPipeline(UnifiedDomainPipeline):
     entry records."""
 
     EXTRACTION_QUERY = EXTRACTION_QUERY
+    REFERENCE_LABEL = "IRS Pub. 15-T federal withholding"   # named in the chat scope check (core/unified_pipeline.py)
     DOCUMENT_TYPE_DESCRIPTION = (
         "an individual employee's PAYSLIP or PAY STUB -- a specific pay period's stated "
         "gross pay, deductions, and net pay for one named employee"

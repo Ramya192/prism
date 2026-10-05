@@ -39,10 +39,15 @@ class FraudPipeline:
 
         investigation = routing = alert_text = ""
         if predicted == "FRAUD":
-            investigation = self.analyst.investigate(transaction, response)
-            routing = self.router.route(transaction, investigation)
+            # The downstream agents' prompts read Amount/hour/Time directly,
+            # but a Tier 2 row names its amount "Transaction_Amount" and a
+            # Tier 3 row may have no amount at all (KeyError, measured on a
+            # Tier 2 CSV) -- hand them a view with those keys always present.
+            view = self._display_view(transaction)
+            investigation = self.analyst.investigate(view, response)
+            routing = self.router.route(view, investigation)
             if "BLOCK" in investigation:
-                alert_text = self.alert.generate_alert(transaction, response, investigation)
+                alert_text = self.alert.generate_alert(view, response, investigation)
 
         return {
             "predicted": predicted,
@@ -52,6 +57,15 @@ class FraudPipeline:
             "routing": routing,
             "alert": alert_text,
         }
+
+    @staticmethod
+    def _display_view(transaction: dict) -> dict:
+        rules = FraudDetectorAgent._normalize_for_rules(transaction)
+        view = dict(transaction)
+        view.setdefault("Amount", rules["Amount"] if rules else "not provided")
+        view.setdefault("hour", rules["hour"] if rules else "not provided")
+        view.setdefault("Time", "not provided")
+        return view
 
     def extract_from_image(self, image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
         """Extracts a transaction dict from a receipt/cheque image via

@@ -254,12 +254,12 @@ def render_batch_upload_section(classifier, orchestrator, config_loader) -> None
                             "verdicts": ingest_result.get("fraud_verdicts"),
                             "summary": ingest_result.get("fraud_summary"),
                         }
-                        if bucket["seed_history"] is None:
-                            # Only the first document per domain seeds that
-                            # domain's chat — same rule render_document_upload's
-                            # own _ingest() already follows for a single-domain
-                            # multi-file upload, applied here per domain bucket.
-                            bucket["seed_history"] = ingest_result.get("seed_history", [])
+                        # Each document's verdict turns (tagged with its
+                        # filename) join that domain's seeded chat, same as
+                        # render_document_upload's own _ingest().
+                        bucket["seed_history"] = [
+                            *(bucket["seed_history"] or []), *ingest_result.get("seed_history", []),
+                        ]
                     status.update(
                         label=f"Done — {len(staged) - len(errors)}/{len(staged)} file(s) ingested.",
                         state="error" if errors else "complete",

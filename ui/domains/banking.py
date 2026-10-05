@@ -4,6 +4,7 @@
 # render_workspace() every other domain uses. Split out of
 # streamlit_app.py, which had grown to 1483 lines.
 
+import io
 from pathlib import Path
 
 import pandas as pd
@@ -16,6 +17,19 @@ from ui.shared import (
     guarded_score, md_safe, render_document_upload, render_chat_panel, render_floating_chat,
     render_explainability,
 )
+
+
+
+def _is_valid_image(uploaded) -> bool:
+    """st.image() hands the bytes to PIL and an invalid file raises
+    UnidentifiedImageError during page render, which no caller can catch --
+    so verify first."""
+    from PIL import Image
+    try:
+        Image.open(io.BytesIO(uploaded.getvalue())).verify()
+        return True
+    except Exception:
+        return False
 
 
 def render_banking_workspace(pipeline) -> None:
@@ -38,7 +52,13 @@ def render_banking_workspace(pipeline) -> None:
 
         with st.container(key="analysis_card"):
             st.markdown("<div class='analysis-title'>PRISM Analysis</div>", unsafe_allow_html=True)
-            if flagged:
+            if "unavailable due to API error" in parsed.get("reason", ""):
+                # The detector fails safe to FLAG when the LLM call errors;
+                # that is not a fraud finding, so don't present it as one.
+                st.warning("⚠ Analysis unavailable — the AI service couldn't be reached "
+                           "or rejected the request. This transaction was flagged for manual "
+                           "review, not judged fraudulent. Please try again in a moment.")
+            elif flagged:
                 st.error("🚨 FRAUD DETECTED")
             else:
                 st.success("✅ LEGITIMATE TRANSACTION")
@@ -48,7 +68,9 @@ def render_banking_workspace(pipeline) -> None:
                 "<span>✓ Explanation</span></div>",
                 unsafe_allow_html=True,
             )
-            render_explainability(flagged, parsed.get("action", ""), parsed.get("reason", ""))
+            render_explainability(
+                flagged, parsed.get("action", ""), parsed.get("reason", ""), parsed.get("decided_by"),
+            )
 
         with st.expander("🔍 Detector Agent Report", expanded=True):
             st.text(f"Risk Level : {parsed['risk_level']}")
@@ -103,7 +125,9 @@ def render_banking_workspace(pipeline) -> None:
     with tab3:
         st.caption("Upload a JPG or PNG image — GPT-4o Vision extracts the transaction amount automatically.")
         uploaded_image = st.file_uploader("Upload receipt or cheque image", type=["jpg", "jpeg", "png", "webp"], key="fraud_img")
-        if uploaded_image is not None:
+        if uploaded_image is not None and not _is_valid_image(uploaded_image):
+            st.error("That doesn't look like a valid image file. Please upload a real JPG, PNG or WEBP.")
+        elif uploaded_image is not None:
             st.image(uploaded_image, caption="Uploaded image", use_container_width=True)
             if st.button("🔍 Extract & Analyse Transaction", type="primary"):
                 mime_map = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}

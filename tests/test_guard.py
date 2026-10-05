@@ -84,7 +84,8 @@ def test_describe_ingest_error_known_and_unknown():
     assert "already ingested" in describe_ingest_error(DuplicateDocumentError("a.pdf", "a.pdf@s1"))
     assert "no extractable text" in describe_ingest_error(EmptyDocumentError("scan.pdf"))
     generic = describe_ingest_error(ValueError("boom: secret internal detail"))
-    assert "ValueError" in generic and "secret internal detail" not in generic
+    assert "Couldn't process this file" in generic
+    assert "ValueError" not in generic and "secret internal detail" not in generic
     assert "AI service" in describe_ingest_error(type("RateLimitError", (Exception,), {})("429"))
 
 

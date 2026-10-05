@@ -67,6 +67,7 @@ DOCUMENT_CONTEXT = (
 class FinancialServicesPipeline(UnifiedDomainPipeline):
     EXTRACTION_QUERY = EXTRACTION_QUERY
     DOCUMENT_SCORING_CONTEXT = DOCUMENT_CONTEXT
+    REFERENCE_LABEL = "FinCEN CVC Guidance"   # named in the chat scope check (core/unified_pipeline.py)
     DOCUMENT_TYPE_DESCRIPTION = (
         "a crypto wallet or exchange activity statement -- a list of individual transfers, "
         "deposits, withdrawals, or trades"

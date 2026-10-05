@@ -5,7 +5,11 @@
 
 FOLLOW_UP_ONLY_NOTE = (
     "(Use these earlier turns only to resolve a follow-up such as \"why was that flagged?\". "
-    "If the new question is about a different topic, ignore them and answer the new question.)"
+    "If the new question is about a different topic, ignore them and answer the new question. "
+    "Each earlier verdict is tagged with the document it belongs to; a turn that says no "
+    "anomalies were found means nothing was flagged in that document -- say so rather than "
+    "inventing flags, and when more than one document is loaded name which document you are "
+    "talking about.)"
 )
 
 

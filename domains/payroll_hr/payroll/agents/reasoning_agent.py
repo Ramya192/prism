@@ -8,12 +8,13 @@
 # check that actually verifies the arithmetic — this agent only extracts
 # and gives its own (LLM) read of whether anything looks wrong.
 
-from core.rag.prompt_safety import UNTRUSTED_CONTEXT_NOTICE
+from core.rag.prompt_safety import UNTRUSTED_CONTEXT_NOTICE, wrap_untrusted
 from core.rag.chat_history import render_history
 import json
 from pydantic import BaseModel, Field
 from typing import Optional
 
+from core.rag.reference_corpus import REFERENCE_SOURCE_ID
 from domains.payroll_hr.payroll.settings import Settings
 
 
@@ -83,18 +84,28 @@ class ReasoningAgent:
             source_instruction = (
                 f'The "source_document" field should be the filename of whichever '
                 f'of these documents most directly backs your answer, one of: '
-                f'{", ".join(source_document)}.'
+                f'{", ".join(source_document)} (or "{REFERENCE_SOURCE_ID}" when the answer '
+                f'comes only from the reference corpus).'
             )
         else:
             actual_source = source_document or (
                 chunks[0].get("source", "unknown") if chunks else "unknown"
             )
             source_instruction = (
-                f'The "source_document" field MUST be exactly "{actual_source}". '
-                f'Do not change it or invent a different filename.'
+                f'The "source_document" field MUST be exactly "{actual_source}", '
+                f'unless the answer comes only from the reference corpus, in which case use '
+                f'"{REFERENCE_SOURCE_ID}". Do not invent a different filename.'
             )
         history_block = self._render_history(history)
-        return f"""You are a payroll compliance analyst.
+        return f"""You are a payroll compliance analyst and HR/payroll policy assistant.
+The context below can hold excerpts of the user's uploaded payslip or register AND
+excerpts of the reference corpus (Source: {REFERENCE_SOURCE_ID} -- e.g. IRS withholding
+and payroll-compliance guidance). Answer the question that was actually asked from
+whichever context is relevant. If it is a policy, regulation or rules question
+(withholding rules, overtime requirements, what a form requires), answer it from the
+reference excerpts, name the rule or publication, and leave "line_items" as an empty
+list -- do not answer it with the uploaded payslip's gross/tax/net lines or with an
+earlier verdict.
 {history_block}Use the context below to answer the question. If the question refers
 back to something in the previous conversation (e.g. "why was that flagged?",
 "what rule does that violate?"), use that conversation to understand what
@@ -111,8 +122,11 @@ currency symbol.
 
 {UNTRUSTED_CONTEXT_NOTICE}
 
-Context:
-{context}
+{wrap_untrusted(context)}
+
+If the question cannot be answered from the context above (it is unrelated to the
+uploaded document and the reference corpus), say so plainly in "answer", leave the
+list empty, set "source_document" to "none", and do not summarise the document instead.
 
 Question: {query}
 

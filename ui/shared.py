@@ -386,8 +386,8 @@ def render_floating_chat(domain_id: str, render_drawer_content) -> None:
 
     if is_open:
         st.markdown(
-            "<style>.block-container { padding-right: 480px !important; "
-            "transition: padding-right 0.2s ease; }</style>",
+            "<style>@media (min-width: 1200px) { .block-container { padding-right: 480px !important; "
+            "transition: padding-right 0.2s ease; } }</style>",
             unsafe_allow_html=True,
         )
         if is_maximized:
@@ -456,7 +456,8 @@ def render_chat_panel(domain_id: str, pipeline, doc_key: str, history_key: str) 
     st.session_state[history_key] = history
     with st.chat_message("assistant"):
         st.markdown(md_safe(data.get("answer", "No answer returned.")))
-        render_citations(result.get("chunks"), doc)
+        if str(data.get("source_document", "")).lower() != "none":   # "none" = off-topic question, nothing backed it
+            render_citations(result.get("chunks"), doc)
         flagged = data.get("flag") or data.get("anomaly_flag")
         reason = data.get("flag_reason") or data.get("anomaly_reason")
         if flagged:
@@ -513,24 +514,33 @@ def render_document_upload(domain_id: str, pipeline, statements_dir: Path, doc_k
     def _ingest(path: str, filename: str):
         if not allow("ingest"):
             return
+        bar = st.progress(0.0, text=f"Ingesting {filename}...")
+
+        def _on_progress(done: int, total: int) -> None:
+            bar.progress(done / total, text=f"Scoring {filename}: {done:,} of {total:,} records")
+
         with st.spinner(f"Ingesting {filename}..."):
             try:
-                result = pipeline.ingest(path, filename=filename, owner=get_owner())
+                result = pipeline.ingest(path, filename=filename, owner=get_owner(), progress=_on_progress)
             except DuplicateDocumentError as e:
+                bar.empty()
                 st.error(describe_ingest_error(e))
                 return
             except Exception as e:  # never show a raw traceback for a bad/unsupported file
+                bar.empty()
                 logger.exception("ingest failed for %s", filename)
                 st.error(f"{filename}: {describe_ingest_error(e)}")
                 return
+        bar.empty()
         stored_name = result["document"]
         if stored_name not in docs:
             docs.append(stored_name)
         per_doc[stored_name] = {"verdicts": result.get("fraud_verdicts"), "summary": result.get("fraud_summary")}
-        if not st.session_state.get(history_key):
-            # Only the first document in a batch seeds the chat — later
-            # ones would otherwise clobber an already-started conversation.
-            st.session_state[history_key] = result.get("seed_history", [])
+        # Every document's verdict turns join the chat (each tagged with its
+        # filename), appended so an already-started conversation is kept.
+        st.session_state[history_key] = [
+            *st.session_state.get(history_key, []), *result.get("seed_history", []),
+        ]
         st.success(f"Stored {result['chunks_stored']} chunks for {display_name(stored_name)}")
 
     if available:

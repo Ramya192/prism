@@ -2,7 +2,7 @@
 # Ported from document_intelligence_system/agents/reasoning_agent.py —
 # logic unchanged, import paths moved under domains.banking.documents.
 
-from core.rag.prompt_safety import UNTRUSTED_CONTEXT_NOTICE
+from core.rag.prompt_safety import UNTRUSTED_CONTEXT_NOTICE, wrap_untrusted
 from core.rag.chat_history import render_history
 import json
 from pydantic import BaseModel, Field
@@ -93,9 +93,12 @@ The context below can hold excerpts of the user's uploaded document AND excerpts
 the bank's reference corpus (Source: {REFERENCE_SOURCE_ID} -- e.g. Regulation E, 12 CFR
 1005). Answer the question that was actually asked from whichever context is relevant.
 If it is a regulation, policy or rights question (liability limits, dispute deadlines,
-what a rule requires), answer it from the reference excerpts, cite the section number,
-and leave "transactions" as an empty list -- do not answer it with the uploaded
-document's transactions or with an earlier fraud verdict.
+what a rule requires), answer it from the reference excerpts and leave "transactions"
+as an empty list -- do not answer it with the uploaded document's transactions or with
+an earlier fraud verdict. The "answer" text itself must name the governing section,
+e.g. "(Regulation E, 12 CFR 1005.6)" -- take the section number from the excerpt's
+own heading or citation, and never leave it out. When the excerpt sets out tiers or limits (e.g. liability by
+reporting time), state every tier, including the final "unlimited" one.
 {history_block}Use the context below to answer the question. If the question refers
 back to something in the previous conversation (e.g. "why was that flagged?",
 "which rule does that break?"), use that conversation to understand what
@@ -107,8 +110,11 @@ All amounts are in USD. Always use the $ symbol. Never use ₹ or any other curr
 
 {UNTRUSTED_CONTEXT_NOTICE}
 
-Context:
-{context}
+{wrap_untrusted(context)}
+
+If the question cannot be answered from the context above (it is unrelated to the
+uploaded document and the reference corpus), say so plainly in "answer", leave the
+list empty, set "source_document" to "none", and do not summarise the document instead.
 
 Question: {query}
 
