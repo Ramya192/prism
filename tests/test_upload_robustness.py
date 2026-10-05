@@ -202,7 +202,7 @@ def test_gate_rejects_wrong_document_type_as_chat_only(loader, tmp_path):
     assert result["fraud_verdicts"] == []
     assert pipeline.scored == []
     assert result["chunks_stored"] > 0   # still chattable
-    assert result["seed_history"][-1]["text"].startswith("A short summary")
+    assert result["seed_history"][-1]["text"].startswith("[brochure.txt] A short summary")
 
 
 @pytest.mark.parametrize("answer", ["MATCH", "match.", "", "I am not sure"])

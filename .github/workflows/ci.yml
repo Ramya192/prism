@@ -38,6 +38,12 @@ jobs:
           tests/test_ui_verdicts.py
           tests/test_conversational_rag.py
           tests/test_startup_wiring.py
+          tests/test_untrusted_context.py
+          tests/test_scoring_progress.py
+          tests/test_report_fixes.py
+          tests/test_detection_layer.py
+          tests/test_retrieval_order.py
+          tests/test_logging_and_history.py
   docker-build:
     runs-on: ubuntu-latest
     steps:

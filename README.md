@@ -41,7 +41,7 @@ corpus grounding its chat, and each ships a regenerable eval harness.
 | Domains | 4 (banking, insurance, payroll_hr, financial_services) |
 | ML tiers | 9 fraud tiers across the 4 domains (HR is single-tier by design) |
 | Committed model artifacts | 15 joblib files, ~30 MB (`models/`) — a fresh clone needs no training data |
-| Tests | 266 (95 offline tests run in CI; the rest need API keys and/or the train CSVs) |
+| Tests | 331 (159 offline tests run in CI; the rest need API keys and/or the train CSVs) |
 | Eval | Deterministic-layer F1 per tier against a temporal holdout — see [Evaluation](#evaluation) |
 
 **Known limitations** (deliberate, not oversights):
@@ -255,7 +255,7 @@ prism/
 ├── docs/                        # UNIFIED_INGESTION_VISION.md, DATA_CONVENTIONS.md
 ├── streamlit_app.py             # entry point — page setup + step routing only
 ├── main.py                      # CLI smoke test across all 4 domains
-├── tests/                       # 266 tests
+├── tests/                       # 331 tests
 ├── models/                      # committed joblib artifacts for every ML scorer / drift
 │                                #   detector (core/model_store.py) — loaded at startup, no train CSV needed
 ├── deploy/                      # AWS EC2 provisioning runbook + user-data
