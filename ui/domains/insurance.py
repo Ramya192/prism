@@ -42,7 +42,7 @@ def render_insurance_workspace(pipeline) -> None:
     render_workspace(
         domain_id="insurance", pipeline=pipeline,
         upload_tab_label="📄 Upload Claim",
-        statements_dir=Path("domains/insurance/data/statements"),
+        statements_dir=Path("domains/insurance/samples"),
         upload_caption="Upload a claim or EOB (PDF/DOCX).",
         manual_entry_fn=insurance_manual_entry,
     )

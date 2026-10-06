@@ -35,7 +35,7 @@ _HERE             = Path(__file__).parent
 RAW_PATH           = _HERE / "creditcard.csv"
 TRAIN_PATH         = _HERE / "train.csv"
 HOLDOUT_PATH       = _HERE / "test_holdout.csv"
-BALANCED_PATH      = _HERE / "transactions_balanced.csv"
+BALANCED_PATH      = _HERE.parent.parent / "samples" / "transactions_balanced.csv"   # sample upload, lives with the other samples
 BALANCED_SEED      = 42
 
 # ── Load original dataset ──────────────────────────────────────────────

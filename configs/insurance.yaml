@@ -69,7 +69,7 @@ llm:
 
 data:
   demo_csv: domains/insurance/data/train.csv
-  statements_dir: domains/insurance/data/statements
+  statements_dir: domains/insurance/samples
   reference_corpus: domains/insurance/reference_corpus/cms_claims_processing_excerpt.txt
   reference_corpus_label: "CMS Claims Manual, Ch. 26"
 

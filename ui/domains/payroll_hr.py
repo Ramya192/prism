@@ -37,7 +37,7 @@ def render_payroll_hr_workspace(pipeline) -> None:
     render_workspace(
         domain_id="payroll_hr", pipeline=pipeline,
         upload_tab_label="📄 Upload Document",
-        statements_dir=Path("domains/payroll_hr/payroll/data/statements"),
+        statements_dir=Path("domains/payroll_hr/samples"),
         upload_caption=(
             "Upload a payslip, payroll register, or general HR document (e.g. an employee "
             "handbook, PDF/DOCX) — Prism detects which it is and only runs the fraud check "

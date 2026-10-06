@@ -10,7 +10,7 @@ Usage (from the prism/ repo root):
     python domains/financial_services/tools/generate_wallet_statement.py
 
 Output:
-    domains/financial_services/data/statements/WALLET001_statement.pdf
+    domains/financial_services/samples/WALLET001_statement.pdf
 """
 
 from pathlib import Path
@@ -23,7 +23,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
 
 _HERE = Path(__file__).parent.parent  # domains/financial_services/
-OUTPUT_DIR = _HERE / "data" / "statements"
+OUTPUT_DIR = _HERE / "samples"
 
 WALLET_ADDRESS = "0x8f3a...c92e"
 

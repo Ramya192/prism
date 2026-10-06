@@ -35,7 +35,7 @@ def _is_valid_image(uploaded) -> bool:
 def render_banking_workspace(pipeline) -> None:
     tab1, tab2, tab3 = st.tabs(["📄 Upload Document", "✏️ Manual Entry", "🖼 Image Input"])
 
-    demo_csv = Path("domains/banking/fraud/data/transactions_balanced.csv")
+    demo_csv = Path("domains/banking/samples/transactions_balanced.csv")
     df_full = pd.read_csv(demo_csv) if demo_csv.exists() else None
     context = (
         FraudPipeline.default_context(df_full["Amount"].mean(), df_full["Amount"].max())
@@ -102,7 +102,7 @@ def render_banking_workspace(pipeline) -> None:
         # records and chattable chunks, same as a PDF/DOCX's extracted
         # ones -- see core/rag/base_document_loader_agent.py).
         render_document_upload(
-            "banking", pipeline, Path("domains/banking/documents/data/statements"),
+            "banking", pipeline, Path("domains/banking/samples"),
             "banking_doc", "banking_verdicts", "banking_history",
             "Upload a bank statement or a transaction CSV — it's run through the same "
             "rules→ML→LLM fraud engine either way, and becomes chattable via the 💬 button below.",

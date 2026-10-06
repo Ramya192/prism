@@ -16,9 +16,9 @@ Usage (from the prism/ repo root):
     python domains/insurance/tools/generate_claim_document.py
 
 Output:
-    domains/insurance/data/statements/CLM001_claim.pdf   (clean)
-    domains/insurance/data/statements/CLM002_claim.pdf   (clean)
-    domains/insurance/data/statements/CLM003_claim.pdf   (approved > billed -- rule violation)
+    domains/insurance/samples/CLM001_claim.pdf   (clean)
+    domains/insurance/samples/CLM002_claim.pdf   (clean)
+    domains/insurance/samples/CLM003_claim.pdf   (approved > billed -- rule violation)
 """
 
 from pathlib import Path
@@ -31,7 +31,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
 
 _HERE = Path(__file__).parent.parent  # domains/insurance/
-OUTPUT_DIR = _HERE / "data" / "statements"
+OUTPUT_DIR = _HERE / "samples"
 
 PAYER_NAME = "Meridian Health Plan"
 PAYER_ADDRESS = "500 Claims Way, Hartford, CT 06103"

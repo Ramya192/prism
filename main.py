@@ -41,7 +41,7 @@ def run_fraud_smoke_test(orchestrator: AgentOrchestrator) -> None:
     print("=" * 60)
     print("banking — smoke test (few demo transactions)")
     print("=" * 60)
-    demo_csv = Path("domains/banking/fraud/data/transactions_balanced.csv")
+    demo_csv = Path("domains/banking/samples/transactions_balanced.csv")
     if not demo_csv.exists():
         print(f"  ⚠ {demo_csv} not found — skipping.")
         return
@@ -70,7 +70,7 @@ def run_documents_smoke_test(orchestrator: AgentOrchestrator) -> None:
     print("=" * 60)
     print("banking — document chat smoke test (ingest + score + query one statement)")
     print("=" * 60)
-    statements_dir = Path("domains/banking/documents/data/statements")
+    statements_dir = Path("domains/banking/samples")
     pdfs = sorted(statements_dir.glob("*.pdf")) if statements_dir.exists() else []
     if not pdfs:
         print(f"  ⚠ No PDFs found in {statements_dir} — skipping.")
@@ -100,7 +100,7 @@ def run_payroll_smoke_test(orchestrator: AgentOrchestrator) -> None:
     print("=" * 60)
     print("payroll_hr — document chat smoke test (ingest -> score -> follow-up chat)")
     print("=" * 60)
-    statements_dir = Path("domains/payroll_hr/payroll/data/statements")
+    statements_dir = Path("domains/payroll_hr/samples")
     pdfs = sorted(statements_dir.glob("*.pdf")) if statements_dir.exists() else []
     if not pdfs:
         print(f"  ⚠ No PDFs found in {statements_dir} — run "

@@ -30,4 +30,6 @@ This distinction determines whether currency conversion is safe by itself, or ac
 | `payroll_hr` (payroll) | 2 | `jb1433/sample-employees-monthly-salary` | INR→USD converted |
 | `insurance` | 1 | `nudratabbas/healthcare-fraud-detection-dataset` | USD (US states/Medicaid, no conversion needed) |
 | `insurance` | 2 | `tejalaveti2306/health-insurance-claims-data-for-fraud-detection` | USD (no conversion needed; unrealistic amount scale flagged separately, not a currency issue) |
+| `financial_services` | 1 | `muhammadhussnain09/crypto-scam-transaction-dataset` | USD-native (`transaction_amount_usd`, `gas_fee_usd`); no conversion. Promoted over a benched mobile-wallet dataset that was in UZS and never converted |
+| `financial_services` | 2 | `sergionefedov/crypto-exchange-fraud-and-wash-trading-detection` | USD-native (`notional_usd`, `gas_fee_usd`); no conversion |
 | `payroll_hr` (hr) | 1 | `shivamb/real-or-fake-fake-jobposting-prediction` | N/A — deliberately excludes salary amounts entirely (multi-country dataset, no currency field, 84% missing); uses presence/absence as a currency-agnostic signal instead |

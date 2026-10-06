@@ -37,13 +37,13 @@ WORKSPACE_SUBTITLES = {
 # classification guesses wrong; see ui/batch_upload.py's _stage_batch_item)
 SAMPLE_FILES = [
     ("banking_pdf", "🏦 Bank statement (PDF)",
-     "domains/banking/documents/data/statements/AC00003_statement.pdf", "AC00003_statement.pdf", "banking"),
+     "domains/banking/samples/AC00003_statement.pdf", "AC00003_statement.pdf", "banking"),
     ("banking_csv", "🏦 Transactions (CSV)",
-     "domains/banking/fraud/data/transactions_balanced.csv", "transactions_balanced.csv", "banking"),
+     "domains/banking/samples/transactions_balanced.csv", "transactions_balanced.csv", "banking"),
     ("insurance_pdf", "🩺 Insurance claim (PDF)",
-     "domains/insurance/data/statements/CLM001_claim.pdf", "CLM001_claim.pdf", "insurance"),
+     "domains/insurance/samples/CLM001_claim.pdf", "CLM001_claim.pdf", "insurance"),
     ("finserv_pdf", "💱 Wallet statement (PDF)",
-     "domains/financial_services/data/statements/WALLET001_statement.pdf", "WALLET001_statement.pdf", "financial_services"),
+     "domains/financial_services/samples/WALLET001_statement.pdf", "WALLET001_statement.pdf", "financial_services"),
     ("payroll_pdf", "🧾 Payslip (PDF)",
-     "domains/payroll_hr/payroll/data/statements/EMP001_payslip.pdf", "EMP001_payslip.pdf", "payroll_hr"),
+     "domains/payroll_hr/samples/EMP001_payslip.pdf", "EMP001_payslip.pdf", "payroll_hr"),
 ]

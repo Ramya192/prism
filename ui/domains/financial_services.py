@@ -44,7 +44,7 @@ def render_financial_services_workspace(pipeline) -> None:
     render_workspace(
         domain_id="financial_services", pipeline=pipeline,
         upload_tab_label="📄 Upload Statement",
-        statements_dir=Path("domains/financial_services/data/statements"),
+        statements_dir=Path("domains/financial_services/samples"),
         upload_caption="Upload a wallet or exchange activity statement (PDF/DOCX).",
         manual_entry_fn=financial_services_manual_entry,
     )

@@ -28,7 +28,7 @@ from core.orchestrator import AgentOrchestrator
 
 pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("reference_corpora")]
 
-WALLET_STATEMENT = Path("domains/financial_services/data/statements/WALLET001_statement.pdf")
+WALLET_STATEMENT = Path("domains/financial_services/samples/WALLET001_statement.pdf")
 
 
 @pytest.fixture(scope="session")

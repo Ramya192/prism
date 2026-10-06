@@ -22,7 +22,7 @@ payslip-shaped numbers at all. This suite verifies THAT fix, not the base
 class's generic (and, for this document type, insufficient) empty-list
 behavior.
 
-Requires domains/payroll_hr/data/handbooks/SHRM_Sample_Employee_Handbook_2023.docx
+Requires domains/payroll_hr/samples/handbooks/SHRM_Sample_Employee_Handbook_2023.docx
 locally (see that directory's README.md for why it isn't committed) --
 skips entirely if absent. Also requires OPENAI_API_KEY (embeddings) and
 Ollama running locally (LLM_PROVIDER=ollama, the default) or
@@ -41,7 +41,7 @@ from domains.payroll_hr.pipeline import HANDBOOK_QUERY
 
 pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("reference_corpora")]
 
-HANDBOOK = Path("domains/payroll_hr/data/handbooks/SHRM_Sample_Employee_Handbook_2023.docx")
+HANDBOOK = Path("domains/payroll_hr/samples/handbooks/SHRM_Sample_Employee_Handbook_2023.docx")
 
 
 @pytest.fixture(scope="session")
@@ -50,7 +50,7 @@ def pipeline():
     return orchestrator.get_pipeline("payroll_hr")
 
 
-@pytest.mark.skipif(not HANDBOOK.exists(), reason="see domains/payroll_hr/data/handbooks/README.md")
+@pytest.mark.skipif(not HANDBOOK.exists(), reason="see domains/payroll_hr/samples/handbooks/README.md")
 class TestHandbookIngest:
     @pytest.fixture(scope="class")
     def ingest_response(self, pipeline):

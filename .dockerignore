@@ -31,8 +31,8 @@ tests/
 # context picks up whatever's on disk). Mounted at runtime instead (see
 # docker-compose.yml's domains/*/data volumes), regenerated locally via each
 # domain's prepare_data.py / prepare_tier2_data.py. Deliberately NOT a blanket
-# domains/*/data/*.csv glob -- that would also strip committed demo CSVs like
-# domains/banking/fraud/data/transactions_balanced.csv (pipeline.py's
+# domains/*/data/*.csv glob -- that would also strip committed CSVs like
+# domains/banking/samples/transactions_balanced.csv (the sample upload; also pipeline.py's
 # DEFAULT_DEMO_CSV), which should stay baked into the image as a fallback for
 # a container run without these volumes mounted.
 domains/banking/fraud/data/creditcard.csv
@@ -65,13 +65,8 @@ domains/financial_services/data/tier2_raw/
 domains/financial_services/data/tier2_train.csv
 domains/financial_services/data/tier2_test_holdout.csv
 domains/banking/documents/data/raw/
-domains/banking/documents/data/statements/*.pdf
-!domains/banking/documents/data/statements/AC00003_statement.pdf
-!domains/banking/documents/data/statements/AC00140_statement.pdf
-!domains/banking/documents/data/statements/AC00254_statement.pdf
-!domains/banking/documents/data/statements/AC00360_statement.pdf
-!domains/banking/documents/data/statements/AC00448_statement.pdf
-domains/payroll_hr/data/handbooks/*.docx
+domains/banking/documents/data/statements/
+domains/payroll_hr/samples/handbooks/*.docx
 
 # Secrets -- never bake these into an image
 .env

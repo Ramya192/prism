@@ -207,6 +207,14 @@ This `.env` is **not** the same as your local dev `.env` — it sets
 local Ollama that doesn't exist on this box. See the comments in
 `deploy/.env.production.example` for why.
 
+> **Keep `CHROMA_PATH=./vector_store`.** That is the only store folder
+> `docker-compose.yml` mounts onto the host. An older `.env` (from before the
+> `chroma_db/` → `vector_store/` rename) may still say `CHROMA_PATH=./chroma_db`;
+> the app then writes inside the container, and every `docker compose up
+> --build` or `--force-recreate` silently wipes the reference corpora and all
+> uploaded documents. After editing `.env`, run `docker compose up -d
+> --force-recreate` so the container picks it up.
+
 ### 6e. Build and run
 
 ```bash
@@ -235,6 +243,18 @@ docker compose exec prism python -m domains.banking.documents.data.ingest_refere
 docker compose exec prism python -m domains.insurance.data.ingest_reference_corpus
 docker compose exec prism python -m domains.payroll_hr.data.ingest_reference_corpus
 docker compose exec prism python -m domains.financial_services.data.ingest_reference_corpus
+```
+
+Confirm the data landed on the host, not inside the container:
+
+```bash
+ls -la ~/prism/vector_store          # should show chroma.sqlite3 and a few folders
+docker compose up -d --force-recreate
+docker compose exec -T prism python -c "
+import chromadb, os
+c = chromadb.PersistentClient(path=os.getenv('CHROMA_PATH','vector_store'))
+for col in c.list_collections(): print(col.name, col.count())
+"                                    # all four collections still present
 ```
 
 Redeploying code later is just `git pull && docker compose up --build -d`

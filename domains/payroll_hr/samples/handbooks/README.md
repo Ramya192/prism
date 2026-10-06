@@ -16,12 +16,12 @@ locally as a private test fixture is exactly the kind of use it's meant for.
 To run that test locally:
 
 ```
-curl -o domains/payroll_hr/data/handbooks/SHRM_Sample_Employee_Handbook_2023.docx \
+curl -o domains/payroll_hr/samples/handbooks/SHRM_Sample_Employee_Handbook_2023.docx \
   https://www.shrm.org/content/dam/en/shrm/business-solutions/SHRM-Sample-Employee-Handbook-2023.docx
 ```
 
 The test is `skipif`-guarded on this file's presence, same pattern as
-`domains/insurance/data/statements/CLM001_claim.pdf` and
-`domains/financial_services/data/statements/WALLET001_statement.pdf` (both
+`domains/insurance/samples/CLM001_claim.pdf` and
+`domains/financial_services/samples/WALLET001_statement.pdf` (both
 of those are self-generated synthetic demo data, not third-party content,
 so they ARE committed — this is the one exception in the project).

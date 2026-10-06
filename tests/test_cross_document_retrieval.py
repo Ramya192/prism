@@ -33,8 +33,8 @@ from core.orchestrator import AgentOrchestrator
 
 pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("reference_corpora")]
 
-CLM001 = Path("domains/insurance/data/statements/CLM001_claim.pdf")
-CLM003 = Path("domains/insurance/data/statements/CLM003_claim.pdf")
+CLM001 = Path("domains/insurance/samples/CLM001_claim.pdf")
+CLM003 = Path("domains/insurance/samples/CLM003_claim.pdf")
 
 
 @pytest.fixture(scope="session")

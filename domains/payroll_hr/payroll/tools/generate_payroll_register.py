@@ -16,9 +16,9 @@ Usage (from the prism/ repo root):
     python domains/payroll_hr/payroll/tools/generate_payroll_register.py
 
 Output:
-    domains/payroll_hr/payroll/data/statements/EMP001_payslip.pdf   (correct)
-    domains/payroll_hr/payroll/data/statements/EMP002_payslip.pdf   (correct)
-    domains/payroll_hr/payroll/data/statements/EMP003_payslip.pdf   (miscalculated net pay)
+    domains/payroll_hr/samples/EMP001_payslip.pdf   (correct)
+    domains/payroll_hr/samples/EMP002_payslip.pdf   (correct)
+    domains/payroll_hr/samples/EMP003_payslip.pdf   (miscalculated net pay)
 """
 
 from pathlib import Path
@@ -38,8 +38,8 @@ from reportlab.platypus import (
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
 
-_HERE = Path(__file__).parent.parent  # domains/payroll_hr/payroll/
-OUTPUT_DIR = _HERE / "data" / "statements"
+_HERE = Path(__file__).parent.parent.parent  # domains/payroll_hr/
+OUTPUT_DIR = _HERE / "samples"
 
 COMPANY_NAME = "Meridian Manufacturing Co."
 COMPANY_ADDRESS = "1200 Industrial Pkwy, Columbus, OH 43215"

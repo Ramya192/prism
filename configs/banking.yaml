@@ -85,7 +85,7 @@ llm:
 
 data:
   demo_csv: domains/banking/fraud/data/train.csv
-  statements_dir: domains/banking/documents/data/statements
+  statements_dir: domains/banking/samples
   reference_corpus: domains/banking/reference_corpus/regulation_e_excerpt.txt
   reference_corpus_label: "Regulation E (12 CFR 1005)"
 

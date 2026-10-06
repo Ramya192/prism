@@ -57,9 +57,9 @@ Thumbs.db
 domains/banking/fraud/data/creditcard.csv
 
 # payroll_hr — third-party sample handbook (SHRM members-only redistribution
-# terms); re-download per domains/payroll_hr/data/handbooks/README.md,
+# terms); re-download per domains/payroll_hr/samples/handbooks/README.md,
 # never commit the .docx itself.
-domains/payroll_hr/data/handbooks/*.docx
+domains/payroll_hr/samples/handbooks/*.docx
 domains/banking/fraud/data/creditcardfraud.zip
 domains/banking/fraud/data/train.csv
 domains/banking/fraud/data/test_holdout.csv
@@ -97,17 +97,11 @@ domains/financial_services/data/tier2_raw/
 domains/financial_services/data/tier2_train.csv
 domains/financial_services/data/tier2_test_holdout.csv
 
-# banking/documents — bulk-generated statements + raw Kaggle CSV; only the 5
-# accounts evaluation/ground_truth.json references stay committed (see
-# tools/generate_statement.py). Everything else is repo weight with no
-# eval or demo value and can be regenerated locally.
+# banking/documents — bulk-generated statements + raw Kaggle CSV. The 5 accounts
+# evaluation/ground_truth.json references are committed under domains/banking/samples/;
+# this output folder (tools/generate_statement.py) is regenerable repo weight.
 domains/banking/documents/data/raw/
-domains/banking/documents/data/statements/*.pdf
-!domains/banking/documents/data/statements/AC00003_statement.pdf
-!domains/banking/documents/data/statements/AC00140_statement.pdf
-!domains/banking/documents/data/statements/AC00254_statement.pdf
-!domains/banking/documents/data/statements/AC00360_statement.pdf
-!domains/banking/documents/data/statements/AC00448_statement.pdf
+domains/banking/documents/data/statements/
 
 # Eval output (regenerate with eval_harness.py), every domain
 domains/*/EVAL_RESULTS.md

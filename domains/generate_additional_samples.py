@@ -1,4 +1,4 @@
-# data/generate_additional_samples.py
+# domains/generate_additional_samples.py
 # Generates a SECOND, distinct set of sample documents for each domain --
 # one PDF, one DOCX, and one CSV per domain -- deliberately different
 # content (new account/claim/wallet/employee IDs, different transactions
@@ -18,10 +18,10 @@
 # CSV_SCHEMA_HINTS), not just the PDF/DOCX content reformatted.
 #
 # Usage (from the prism/ repo root):
-#     python data/generate_additional_samples.py                    # writes into data/<domain>/
-#     python data/generate_additional_samples.py --out data/set2    # writes into data/set2/<domain>/ instead
+#     python domains/generate_additional_samples.py                    # writes into domains/<domain>/samples/extra/
+#     python domains/generate_additional_samples.py --out /tmp/samples    # writes into /tmp/samples/<domain>/samples/extra/ instead
 #
-# Output: <out>/<domain>/<id>_*.pdf, .docx, and a *_bulk.csv per domain.
+# Output: <out>/<domain>/samples/extra/<id>_*.pdf, .docx, and a *_bulk.csv per domain.
 # Deterministic (fixed random seeds per domain) -- rerunning with the same
 # --out reproduces byte-for-byte the same files; a different --out just
 # relocates the same content rather than generating new content, since
@@ -276,7 +276,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--out", default=str(HERE),
-        help="Output root (a <domain> subfolder is created under it for each of the 4 domains). Default: data/",
+        help="Output root (a <domain>/samples/extra subfolder is created under it for each of the 4 domains). Default: domains/",
     )
     args = parser.parse_args()
     out_root = Path(args.out)
@@ -287,11 +287,11 @@ def main():
         ("financial_services", financial_services_samples),
         ("payroll_hr", payroll_hr_samples),
     ]:
-        domain_dir = out_root / domain
+        domain_dir = out_root / domain / "samples" / "extra"
         domain_dir.mkdir(parents=True, exist_ok=True)
         fn(domain_dir)
 
-    print(f"Wrote new sample sets under {out_root}/<domain>/ for banking, insurance, financial_services, payroll_hr")
+    print(f"Wrote new sample sets under {out_root}/<domain>/samples/extra/ for banking, insurance, financial_services, payroll_hr")
 
 
 if __name__ == "__main__":

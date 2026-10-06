@@ -9,11 +9,6 @@ RAG ingestion — never one or the other based on file format. Add a new
 domain by writing a config file and a thin pipeline adapter, not by
 forking the app.
 
-Prism supersedes two earlier standalone portfolio projects — **Fraud
-Detection** and **FinLens (Document Intelligence)** — by re-platforming
-them as domains on a shared config-driven core, instead of separate repos
-with duplicated orchestration, UI, and deployment plumbing.
-
 ---
 
 ## Live Demo
@@ -36,79 +31,81 @@ working end to end on one shared `UnifiedDomainPipeline`: every upload gets a
 fraud verdict and a chat-ready ingestion, each domain has a curated reference
 corpus grounding its chat, and each ships a regenerable eval harness.
 
-| | |
-|---|---|
-| Domains | 4 (banking, insurance, payroll_hr, financial_services) |
-| ML tiers | 9 fraud tiers across the 4 domains (HR is single-tier by design) |
-| Committed model artifacts | 15 joblib files, ~30 MB (`models/`) — a fresh clone needs no training data |
-| Tests | 331 (159 offline tests run in CI; the rest need API keys and/or the train CSVs) |
-| Eval | Deterministic-layer F1 per tier against a temporal holdout — see [Evaluation](#evaluation) |
+| Domain | Fraud tiers | Documents | Reference corpus (grounds chat) |
+|---|---|---|---|
+| `banking` | Tier 1 (PCA schema), Tier 2 (real-world schema) | Bank statements | Regulation E (12 CFR 1005) |
+| `insurance` | Tier 1, Tier 2 | Claims, EOBs | CMS Claims Processing Manual, Ch. 26 |
+| `payroll_hr` | Payroll Tier 1 + 2; HR job postings (single tier) | Payslips | IRS Pub. 15-T |
+| `financial_services` | Tier 1 (scam schema), Tier 2 (exchange manipulation) | Wallet / exchange statements | FinCEN CVC guidance |
 
-**Known limitations** (deliberate, not oversights):
+Across the four: 9 fraud tiers, 15 committed model artifacts (~30 MB, a fresh
+clone needs no training data), and 331 tests (159 offline tests run in CI).
+Per-tier F1 against a temporal holdout is under [Evaluation](#evaluation).
 
-- **No authentication** on the public demo — only cost guards (rate limits,
-  daily upload/chat/scoring budgets, optional access code).
-- **CSV scoring ceiling** of 2,000 rows per upload (`PRISM_MAX_CSV_ROWS`), and a
-  rolling daily scored-rows budget across all visitors; the UI says when either applies.
-- **Drift detection** is built for every domain but wired into live verdicts only
-  for Banking; the others measured too noisy (see *What the UI does*).
-- **HR** is single-tier (Tier 1 + LLM); no second dataset was found that met the bar.
+**Known limitations**
+
+- **No authentication** on the public demo — only cost guards (rate limits, daily
+  budgets, optional access code).
+- **CSV scoring ceiling** of 2,000 rows per upload; the UI says when it applies.
 - **Banking Tier 1** F1 is low (0.234) because fraud is 0.13% of the holdout: recall
   is 0.76 but precision is 0.14 — borderline rows escape to the LLM tier by design.
-- **No graph-based fraud-ring detection** (GNN) — most datasets lack the linking
-  identifier it needs.
-- **Financial Services documents** never carry the account/backend-level fields its
-  ML tiers need, so document-sourced records resolve to the LLM tier.
 
 ---
 
 ## Architecture
 
 ```
-User uploads a file (any domain) / describes their data
+Upload (CSV / PDF / DOCX), pasted text, or a batch      ui/landing.py
         │
         ▼
-┌───────────────────────────┐
-│  DomainClassifierAgent    │  keyword overlap + CSV-header schema
-│                            │  sniffing against each domain's known
-│                            │  columns; LLM tiebreak only when scores
-│                            │  are genuinely close
-└───────────────────────────┘
+┌──────────────────────────────┐
+│  DomainClassifierAgent       │  CSV-header schema match + keyword overlap;
+│                              │  LLM tiebreak only when scores are close
+└──────────────────────────────┘
         │  best guess + all scores
         ▼
-┌───────────────────────────┐
-│  Human confirms/overrides │  ← nothing below this line runs on the
-│  (streamlit_app.py)       │    classifier's say-so alone
-└───────────────────────────┘
-        │  confirmed domain_id
+┌──────────────────────────────┐
+│  Human confirms or overrides │  ← nothing below runs on the classifier's
+│                              │    say-so alone
+└──────────────────────────────┘
+        │  domain_id
         ▼
-┌───────────────────────────┐
-│  ConfigLoader              │  configs/<domain>.yaml → validated
-│                            │  DomainConfig (Pydantic), ${VAR:default}
-│                            │  env interpolation
-└───────────────────────────┘
+┌──────────────────────────────┐
+│  ConfigLoader                │  configs/<domain>.yaml → validated DomainConfig
+│  AgentOrchestrator           │  builds and caches that domain's pipeline
+└──────────────────────────────┘
         │
         ▼
-┌───────────────────────────┐
-│  AgentOrchestrator         │  imports & instantiates that domain's
-│                            │  Pipeline class, caches it per domain_id
-└───────────────────────────┘
-        │
-        ▼
-┌───────────────────────────┐
-│  domains/<id>/pipeline.py  │  UnifiedDomainPipeline: extraction feeds
-│                            │  rules → tiered ML → LLM fraud scoring
-│                            │  AND RAG ingestion, on the same upload
-└───────────────────────────┘
+ UnifiedDomainPipeline  (core/unified_pipeline.py, one thin subclass per domain)
+
+ INGEST — every upload                           CHAT — per question
+ ─────────────────────────────────────           ─────────────────────────────────────
+ 1. duplicate check (content hash,               1. rate limit + daily budget
+    per browser session)                            (ui/guard.py)
+ 2. load → chunk → embed → ChromaDB              2. scope gate: is this about the
+    (vector_store/)                                 document or the domain?
+ 3. CSV: each row is a record                    3. retrieve: HyDE + multi-query →
+    PDF/DOCX: type gate → retrieve + LLM            RRF fusion over your document AND
+    extraction → zero, one or many records          the domain's reference corpus →
+    (none → chat-only, no verdict)                  optional Cohere rerank
+ 4. score each record (thread pool,              4. reason: document text wrapped as
+    daily scored-rows budget):                      untrusted data, history included
+      Rules → ML tier → LLM                      5. schema-validate the answer
+    each verdict records which layer             6. RAGAS panel: faithfulness,
+    decided it                                      answer relevancy
+ 5. seed the chat with the verdict
 ```
 
-`core/unified_pipeline.py`'s `UnifiedDomainPipeline` is the shared base
-every domain builds on: a PDF/DOCX is extracted via LLM, mapped into the
-exact record shape the domain's CSV-based detector already expects, and
-run through the same rules → ML → LLM cascade a CSV row would hit — while
-the document is independently chunked, embedded, and made chattable. A
-document with no fraud-scoreable fields (e.g. an HR handbook) degrades
-gracefully to chat-only, never a fabricated verdict.
+The fraud cascade is cheapest-first: deterministic rules catch the obvious
+cases, the ML tier that matches the upload's schema (Tier 1 or Tier 2) decides
+whenever it is confident, and only borderline rows — and schemas no ML tier
+recognises — reach the LLM. A document with no fraud-scoreable fields (an HR
+handbook, a loan agreement) degrades to chat-only, never a fabricated verdict.
+
+Retrieval does not decide the verdict. In the fraud path it only reads the fields out
+of a PDF/DOCX (the same retriever and reasoning agent that power chat); the rules, ML and
+LLM then score those fields, and the LLM tier's context is a fixed text note, not retrieved
+text. Retrieval over the reference corpus grounds chat answers, not fraud scoring.
 
 ---
 
@@ -127,71 +124,25 @@ upload gets a fraud verdict and RAG chat regardless of file type.
 Adding a domain means writing `configs/<id>.yaml` (classification hints +
 capabilities) and `domains/<id>/pipeline.py` (a `UnifiedDomainPipeline`
 subclass) — the core (`ConfigLoader`, `AgentOrchestrator`,
-`DomainClassifierAgent`, `streamlit_app.py`'s confirmation flow) doesn't
-change.
+`DomainClassifierAgent`, the UI's confirmation flow) doesn't change.
 
 ---
 
-## What the UI does
+## What you can do
 
-- **Any-file-type ingestion, per domain** — a workspace's upload tab
-  accepts CSV, PDF, or DOCX; every upload yields both a fraud verdict and
-  a chattable document. CSV uploads also support multi-file batches
-  within one domain, each independently scored and jointly chattable via
-  cross-document retrieval.
-- **Batch upload across different domains** — a landing-page "Batch
-  upload" expander accepts several files at once, classifies each
-  independently, lets you override any guess, and — after one combined
-  confirm — routes each to its own domain's pipeline. Results are shown
-  grouped by domain, with a one-click handoff into that domain's normal
-  workspace to keep chatting.
-- **Floating chat panel** — a dockable, maximize/minimize chat widget
-  available from any workspace, so document Q&A doesn't require leaving
-  the fraud-verdict view.
-- **Sidebar config panel** — surfaces the active domain's config-driven
-  thresholds and capabilities directly from `configs/<domain>.yaml`, so
-  the "config, not code" architecture is visible, not just true in the
-  source.
-- **CSV-header schema sniffing** — a raw CSV column dump (no prose) is
-  matched against each domain's known Tier 1/Tier 2 schemas directly, so
-  classification doesn't depend on keyword text being present.
-- **Drift/outlier signal** — an Isolation Forest companion to the
-  supervised classifiers asks "does this look like anything in the training
-  distribution". It is built for all 4 domains, but only Banking's is wired
-  into live verdicts (4.5% legit-outlier rate); the others measured too noisy
-  (Payroll 10%, Financial Services 12–14%, HR 43%, Insurance 51%), so they
-  ship measured but unwired. See `tests/test_*_drift_detector.py`.
-- **Duplicate-upload guard** — a content hash stored in the vector store
-  rejects a repeat of an already-ingested document, within a batch and
-  across batches. It is scoped to the uploading browser session, and each
-  session's documents are stored under their own namespace, so on the shared
-  public store one visitor can neither overwrite, block, nor see another's.
-- **Upload hardening** — scanned/empty files get a clear message instead of a
-  traceback; a CSV past the 2,000-row scoring ceiling says so; rows are
-  scored on a small thread pool; uploads are capped at 15 MB.
-- **Document-type gate** — every domain checks a PDF/DOCX is actually the kind
-  of document its extraction query assumes (payslip, claim, bank/wallet
-  statement) before extracting; a wrong-type document degrades to chat-only
-  with an honest empty verdict instead of a fabricated record.
-- **Cost guards for the public site** — per-session hourly limits and daily
-  budgets on uploads, chat, and manual scoring, plus an optional
-  `PRISM_ACCESS_CODE` gate (`ui/guard.py`). Because one upload can fan out
-  into thousands of LLM calls, scored rows also draw from a rolling daily
-  budget (`core/usage_budget.py`, `PRISM_DAILY_SCORED_ROWS_BUDGET`, default
-  5,000); past it a document is still ingested and chattable but not
-  scored, and the UI says so. It is a cost guard, not authentication; also
-  set a spend cap in the OpenAI dashboard.
-- **Conversational chat** — multi-turn history, seeded with the fraud
-  verdict so a first follow-up like "why was this flagged?" already has it in
-  context.
-- **Fraud-pattern clustering (payroll)** — HDBSCAN clustering over the
-  payroll anomaly space, validated against 3 injected synthetic fraud
-  patterns.
-- **Reference-corpus-grounded chat, all 4 domains** — each domain's RAG
-  retrieval merges a real, curated regulatory/reference document into the
-  same HyDE + multi-query + RRF + rerank ranking as the user's own
-  uploaded document, so chat answers can cite domain rules the upload
-  itself never mentions.
+- **Upload anything** — CSV, PDF or DOCX in any domain gets both a fraud verdict and
+  a chattable document. Several files at once work too, within a domain or
+  across domains from the landing page's batch upload.
+- **Chat with the result** — a floating, multi-turn panel seeded with the verdict
+  ("why was this flagged?"), answering from your document and the domain's
+  reference corpus.
+- **Score one record by hand** — manual entry in every domain, plus image input for
+  Banking.
+- **Read large results at a glance** — a per-layer summary (rules / ML / LLM),
+  a collapsed table and a CSV download instead of thousands of rows.
+- **Safe on a public URL** — duplicate-upload guard, document-type and scope gates,
+  upload caps, per-session rate limits and daily budgets, optional access code
+  (see [Security notes](#security-notes)).
 
 ---
 
@@ -225,6 +176,8 @@ the LLM tier and why) are regenerated by running each
 domain's `eval_harness.py` as a module, which writes an `EVAL_RESULTS.md`
 next to it (git-ignored, since it is regenerable; needs the train/holdout CSVs).
 
+Isolation Forest drift detectors are built for all four domains, but only Banking's is wired into live verdicts (4.5% legit-outlier rate); the others measured too noisy (Payroll 10%, Financial Services 12–14%, HR 43%, Insurance 51%).
+
 RAG quality is separately evaluated via `core/rag/base_rag_evaluator.py`
 (custom cosine/LLM-judge locally, RAGAS in production) — one thin
 wrapper per domain in `domains/<domain>/.../evaluation/rag_evaluator.py`.
@@ -243,7 +196,9 @@ prism/
 │   ├── unified_pipeline.py     # UnifiedDomainPipeline — shared fraud+RAG base
 │   ├── eval/                   # shared eval-harness engine, all domains
 │   └── rag/                    # shared document loader / retriever / evaluator bases
-├── domains/
+├── domains/                     # one self-contained folder per domain — pipeline.py, agents/, tools/,
+│                                #   evaluation/, data/ (train CSVs), reference_corpus/, samples/ (demo files);
+│                                #   see domains/README.md
 │   ├── banking/                 # fraud/ + documents/, one pipeline.py
 │   ├── insurance/                # agents/, evaluation/, pipeline.py
 │   ├── payroll_hr/               # payroll/ + hr/, one pipeline.py
@@ -251,7 +206,6 @@ prism/
 ├── ui/                          # Streamlit UI package (landing, batch upload, shared
 │   │                            #   chat/workspace widgets, one screen per domain)
 │   └── domains/
-├── data/                        # curated sample documents per domain, for demoing
 ├── docs/                        # UNIFIED_INGESTION_VISION.md, DATA_CONVENTIONS.md
 ├── streamlit_app.py             # entry point — page setup + step routing only
 ├── main.py                      # CLI smoke test across all 4 domains
@@ -380,17 +334,3 @@ running Ollama; the drift/eval suites need the train/holdout CSVs.
 - **No authentication.** The public demo is open; see the cost guards above.
 - **Model artifacts are pickles** and are loaded only from this repo's own
   `models/` directory, never from user input.
-
----
-
-## Where the source domains came from
-
-- **Banking** — ported from the standalone [Fraud Detection](https://github.com/Ramya192/fraud-detection) project (fraud side) and [FinLens / Document Intelligence](https://github.com/Ramya192/document-intelligence-system) project (document side): the 4-agent hybrid fraud pipeline with a temporal train/holdout split (no leakage), and the 4-agent RAG pipeline with a dual-backend RAG evaluator, unified under one config id and one pipeline.
-- **Insurance, Payroll & HR, Financial Services** — built directly on the same unified-pipeline pattern (`core/unified_pipeline.py`), each with its own tiered ML scorers trained on real public datasets (CMS/SF-Salaries/EMSCAD/blockchain-scam sources — see each domain's `data/prepare_data.py` for provenance).
-
----
-
-## Author
-
-**Ramya** — Mainframe professional transitioning to Agentic AI.
-Target: Agentic AI Developer roles at BFSI firms and Big Tech.
