@@ -27,7 +27,7 @@ WORKSPACE_SUBTITLES = {
 
 # Small, already-curated demo files (the same ones each workspace's own
 # "pick a demo document" selectbox reads server-side) offered here too, on
-# the landing page's "...or try a sample file" picker — for an evaluator
+# the landing page's "...or try a sample file" picker — for a visitor
 # on the deployed app who has no bank statement/claim/payslip of their
 # own, this stays inside the detect->confirm->run story (classify ->
 # confirm/override -> auto-ingested) instead of a separate download step.

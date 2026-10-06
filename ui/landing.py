@@ -133,7 +133,7 @@ def render_landing(config_loader, orchestrator, classifier) -> None:
                 else:
                     # No file of your own? Try one of ours — same small curated
                     # demo files each workspace's own "pick a demo document"
-                    # reads server-side, offered here so a recruiter can stay
+                    # reads server-side, offered here so a visitor can stay
                     # inside the detect->confirm->run story instead of bouncing
                     # out to a download and back.
                     st.caption("New here? Try a sample file below — no upload needed:")

@@ -7,7 +7,7 @@
 #   - global daily budgets across all visitors, so the worst case for a day
 #     is bounded no matter how many sessions show up, and
 #   - an optional shared access code (PRISM_ACCESS_CODE) that gates the
-#     whole app when set -- off by default so a portfolio demo stays open.
+#     whole app when set -- off by default so the public demo stays open.
 #
 # It is in-process state: it resets on restart and isn't shared across
 # workers, which is right for this single-container deployment. It is a
