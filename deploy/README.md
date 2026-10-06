@@ -267,6 +267,30 @@ scikit-learn/LightGBM/XGBoost differ from the ones the artifacts were built
 with — rebuild them locally (`python -m core.model_store --rebuild`), commit,
 and redeploy.
 
+### 6g. Expire visitor uploads (cron)
+
+Uploads from the public demo are stored in the vector store under the visitor's
+browser session. Nothing deletes them by itself, so schedule the cleanup
+(`core/rag/purge_old_uploads.py`; reference corpora are never touched). First try
+it by hand — the default is a dry run:
+
+```bash
+docker compose exec -T prism python -m core.rag.purge_old_uploads --hours 24
+docker compose exec -T prism python -m core.rag.purge_old_uploads --hours 24 --apply
+```
+
+Uploads made before the age stamp existed have no timestamp and are skipped; clear
+those once with `--include-untimed --apply`. Then schedule it hourly (Amazon Linux
+2023 does not ship cron):
+
+```bash
+sudo dnf install -y cronie && sudo systemctl enable --now crond
+crontab -e     # add the line below
+15 * * * * cd /home/ec2-user/prism && docker compose exec -T prism python -m core.rag.purge_old_uploads --hours 24 --apply >> /home/ec2-user/prism-purge.log 2>&1
+```
+
+Check `~/prism-purge.log` the next day; it prints one line per domain.
+
 ---
 
 ## Part 7 — Verify

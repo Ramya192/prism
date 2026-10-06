@@ -15,3 +15,8 @@ textColor = "#191d24"
 # read into pandas would OOM it. 15MB covers every sample/statement file.
 [server]
 maxUploadSize = 15
+
+# No outbound usage statistics from the public demo (Streamlit sends anonymous
+# usage data by default, including from the server process).
+[browser]
+gatherUsageStats = false

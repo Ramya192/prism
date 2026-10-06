@@ -11,6 +11,7 @@ import streamlit as st
 
 from core.rag.base_document_loader_agent import DuplicateDocumentError, display_name
 from ui.guard import allow, describe_ingest_error, get_owner
+from ui.uploads import demo_file_uploader
 
 from ui.constants import DOMAIN_QUICK_PICKS, SAMPLE_FILES
 from ui.shared import render_fraud_verdicts
@@ -145,7 +146,7 @@ def render_batch_upload_section(classifier, orchestrator, config_loader) -> None
             "Drop files from different domains together — each gets its own domain guess, "
             "and nothing is ingested or scored until you confirm (or override) every guess below."
         )
-        batch_files = st.file_uploader(
+        batch_files = demo_file_uploader(
             "Upload multiple files", type=["csv", "pdf", "docx", "txt"],
             accept_multiple_files=True, key="batch_uploader",
         )

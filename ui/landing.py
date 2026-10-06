@@ -14,6 +14,7 @@ import streamlit as st
 
 from ui.constants import SAMPLE_FILES
 from ui.guard import allow, describe_ingest_error, get_owner
+from ui.uploads import demo_file_uploader
 from ui.shared import md_safe, render_pipeline_flow, render_config_panel
 from ui.batch_upload import render_domain_quick_picks, render_batch_upload_section
 
@@ -115,7 +116,7 @@ def render_landing(config_loader, orchestrator, classifier) -> None:
                     "Paste any snippet of real content — not a filename — and I'll match its wording "
                     "against each domain's own vocabulary to guess where it belongs."
                 )
-                uploaded = st.file_uploader(
+                uploaded = demo_file_uploader(
                     "...or drop a file", type=["csv", "pdf", "docx", "txt"], label_visibility="collapsed",
                 )
                 upload_text = ""

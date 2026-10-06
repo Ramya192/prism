@@ -13,6 +13,7 @@ import streamlit as st
 from domains.banking.fraud.pipeline import FraudPipeline
 
 from ui.guard import allow
+from ui.uploads import demo_file_uploader
 from ui.shared import (
     guarded_score, md_safe, render_document_upload, render_chat_panel, render_floating_chat,
     render_explainability,
@@ -124,7 +125,7 @@ def render_banking_workspace(pipeline) -> None:
 
     with tab3:
         st.caption("Upload a JPG or PNG image — GPT-4o Vision extracts the transaction amount automatically.")
-        uploaded_image = st.file_uploader("Upload receipt or cheque image", type=["jpg", "jpeg", "png", "webp"], key="fraud_img")
+        uploaded_image = demo_file_uploader("Upload receipt or cheque image", type=["jpg", "jpeg", "png", "webp"], key="fraud_img")
         if uploaded_image is not None and not _is_valid_image(uploaded_image):
             st.error("That doesn't look like a valid image file. Please upload a real JPG, PNG or WEBP.")
         elif uploaded_image is not None:

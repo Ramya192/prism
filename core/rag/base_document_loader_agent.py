@@ -35,6 +35,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from pathlib import Path
 import hashlib
+import time
 import pdfplumber
 import docx
 import pandas as pd
@@ -210,6 +211,9 @@ class BaseDocumentLoaderAgent:
         extra_metadata = {**self._extract_metadata(full_text), "content_hash": self._content_hash(file_path)}
         if owner:
             extra_metadata["owner"] = owner
+            # Lets core/rag/purge_old_uploads.py expire a visitor's upload by age;
+            # reference-corpus and ownerless documents are never stamped.
+            extra_metadata["uploaded_at"] = int(time.time())
         vectors = self.embedder.embed_documents(chunks)
 
         self._store_chroma(filename, chunks, vectors, extra_metadata)

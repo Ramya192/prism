@@ -38,17 +38,22 @@ def find_legacy_chunks(collection) -> dict[str, list[str]]:
     return legacy
 
 
-def purge(apply: bool = False) -> int:
-    """Returns the number of legacy chunks found (deleted only if `apply`)."""
-    from chromadb import PersistentClient
-
-    # Several domains can share one Chroma path; open each (path, collection) once.
+def collection_targets() -> dict[tuple[str, str], str]:
+    """{(chroma path, collection name): domain id}. Several domains can share
+    one Chroma path, so each (path, collection) is listed once."""
     targets = {}
     for domain in ConfigLoader().list_domains():
         vdb = domain.extra.get("vector_db") or {}
         if vdb.get("collection") and vdb.get("chroma_path"):
             targets[(vdb["chroma_path"], vdb["collection"])] = domain.id
+    return targets
 
+
+def purge(apply: bool = False) -> int:
+    """Returns the number of legacy chunks found (deleted only if `apply`)."""
+    from chromadb import PersistentClient
+
+    targets = collection_targets()
     total = 0
     for (path, name), domain_id in sorted(targets.items(), key=lambda kv: kv[1]):
         collection = PersistentClient(path=path).get_or_create_collection(name=name)

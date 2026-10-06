@@ -39,7 +39,7 @@ corpus grounding its chat, and each ships a regenerable eval harness.
 | `financial_services` | Tier 1 (scam schema), Tier 2 (exchange manipulation) | Wallet / exchange statements | FinCEN CVC guidance |
 
 Across the four: 9 fraud tiers, 15 committed model artifacts (~30 MB, a fresh
-clone needs no training data), and 331 tests (159 offline tests run in CI).
+clone needs no training data), and 345 tests (173 offline tests run in CI).
 Per-tier F1 against a temporal holdout is under [Evaluation](#evaluation).
 
 **Known limitations**
@@ -209,7 +209,7 @@ prism/
 ├── docs/                        # UNIFIED_INGESTION_VISION.md, DATA_CONVENTIONS.md
 ├── streamlit_app.py             # entry point — page setup + step routing only
 ├── main.py                      # CLI smoke test across all 4 domains
-├── tests/                       # 331 tests
+├── tests/                       # 345 tests
 ├── models/                      # committed joblib artifacts for every ML scorer / drift
 │                                #   detector (core/model_store.py) — loaded at startup, no train CSV needed
 ├── deploy/                      # AWS EC2 provisioning runbook + user-data
@@ -332,5 +332,9 @@ running Ollama; the drift/eval suites need the train/holdout CSVs.
   document's own claims, extraction output is schema-validated, and chat
   output is only ever rendered as text.
 - **No authentication.** The public demo is open; see the cost guards above.
+- **Uploads on the public demo.** Please use the sample files, not real personal or financial
+  documents. An uploaded document's text is sent to OpenAI for processing and stored in the demo's
+  vector store under your browser session; other visitors cannot see it through the app. A scheduled
+  job (`core/rag/purge_old_uploads.py`, set up in `deploy/README.md`) deletes uploads older than 24 hours.
 - **Model artifacts are pickles** and are loaded only from this repo's own
   `models/` directory, never from user input.

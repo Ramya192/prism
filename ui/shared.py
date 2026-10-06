@@ -18,6 +18,7 @@ import streamlit as st
 from core.rag.base_document_loader_agent import DuplicateDocumentError, display_name
 from core.rag.reference_corpus import REFERENCE_SOURCE_ID
 from ui.guard import allow, describe_ingest_error, get_owner
+from ui.uploads import demo_file_uploader
 
 logger = logging.getLogger(__name__)
 
@@ -503,7 +504,7 @@ def render_document_upload(domain_id: str, pipeline, statements_dir: Path, doc_k
     `doc_key` holds the accumulated list of ingested filenames."""
     st.caption(upload_caption)
     available = sorted(p.stem for p in statements_dir.glob("*") if p.suffix.lower() in {".pdf", ".docx"}) if statements_dir.exists() else []
-    uploaded_files = st.file_uploader(
+    uploaded_files = demo_file_uploader(
         "Upload document(s)", type=["csv", "pdf", "docx", "txt"], key=f"{domain_id}_upload",
         label_visibility="collapsed", accept_multiple_files=True,
     )
