@@ -38,7 +38,7 @@ corpus grounding its chat, and each ships a regenerable eval harness.
 | `financial_services` | Tier 1 (scam schema), Tier 2 (exchange manipulation) | Wallet / exchange statements | FinCEN CVC guidance |
 
 Across the four: 9 fraud tiers, 15 committed model artifacts (~30 MB, a fresh
-clone needs no training data), and 351 tests (179 offline tests run in CI).
+clone needs no training data), and 353 tests (179 offline tests run in CI).
 Per-tier F1 against a temporal holdout is under [Evaluation](#evaluation).
 
 **Known limitations**
@@ -227,7 +227,7 @@ prism/
 ├── docs/                        # UNIFIED_INGESTION_VISION.md, DATA_CONVENTIONS.md
 ├── streamlit_app.py             # entry point — page setup + step routing only
 ├── main.py                      # CLI smoke test across all 4 domains
-├── tests/                       # 351 tests
+├── tests/                       # 353 tests
 ├── models/                      # committed joblib artifacts for every ML scorer / drift
 │                                #   detector (core/model_store.py) — loaded at startup, no train CSV needed
 ├── deploy/                      # AWS EC2 provisioning runbook + user-data
