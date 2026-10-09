@@ -35,6 +35,7 @@ def render_batch_results_view(config_loader, orchestrator) -> None:
         if st.button("← back to upload"):
             del st.session_state["batch_results"]
             st.session_state.pop("batch_errors", None)
+            st.session_state.pop("batch_skipped", None)
             st.rerun()
     with reset_col:
         if st.button("↺ Start over"):
@@ -49,9 +50,15 @@ def render_batch_results_view(config_loader, orchestrator) -> None:
             for e in errors:
                 st.error(e)
 
+    skipped = st.session_state.get("batch_skipped") or []
+    if skipped:
+        with st.expander(f"ℹ {len(skipped)} file(s) skipped — already ingested", expanded=not errors):
+            for msg in skipped:
+                st.info(msg)
+
     results = st.session_state.get("batch_results") or {}
     if not results:
-        st.info("No files were successfully ingested.")
+        st.info("No new files were ingested." if skipped and not errors else "No files were successfully ingested.")
         return
 
     for domain_id, bucket in results.items():
@@ -212,6 +219,7 @@ def render_batch_upload_section(classifier, orchestrator, config_loader) -> None
             if st.button("✅ Confirm and run batch", type="primary", key="batch_confirm_btn"):
                 results: dict[str, dict] = {}
                 errors: list[str] = []
+                skipped: list[str] = []  # duplicates: nothing went wrong, so not counted as failures
                 # Real per-file progress, not one silent spinner for the
                 # whole batch — each document is a real LLM extraction +
                 # RAG embed (slower still on a local Ollama backend, see
@@ -237,8 +245,8 @@ def render_batch_upload_section(classifier, orchestrator, config_loader) -> None
                         try:
                             ingest_result = pipeline.ingest(tmp_path, filename=Path(item["name"]).name, owner=get_owner())
                         except DuplicateDocumentError as e:
-                            errors.append(f"{item['name']}: {describe_ingest_error(e)}")
-                            st.write(f"✗ {item['name']} — duplicate, already ingested as '{display_name(e.existing)}'")
+                            skipped.append(f"{item['name']}: {describe_ingest_error(e)}")
+                            st.write(f"↷ {item['name']} — skipped, already ingested as '{display_name(e.existing)}'")
                             continue
                         except Exception as e:
                             logger.exception("batch ingest failed for %s", item["name"])
@@ -262,10 +270,15 @@ def render_batch_upload_section(classifier, orchestrator, config_loader) -> None
                             *(bucket["seed_history"] or []), *ingest_result.get("seed_history", []),
                         ]
                     status.update(
-                        label=f"Done — {len(staged) - len(errors)}/{len(staged)} file(s) ingested.",
+                        label=(
+                            f"Done — {len(staged) - len(errors) - len(skipped)}/{len(staged)} file(s) ingested"
+                            + (f", {len(skipped)} already ingested" if skipped else "")
+                            + "."
+                        ),
                         state="error" if errors else "complete",
                     )
                 st.session_state["batch_results"] = results
                 st.session_state["batch_errors"] = errors
+                st.session_state["batch_skipped"] = skipped
                 del st.session_state["batch_staged"]
                 st.rerun()

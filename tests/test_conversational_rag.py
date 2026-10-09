@@ -60,6 +60,15 @@ class TestBuildSeedHistory:
         assert "No anomalies found" in seed[1]["text"]
         assert "⚠" not in seed[1]["text"]
 
+    def test_nothing_scored_does_not_claim_a_clean_check(self):
+        """No verdict at all (not this domain's kind of document) must not read
+        as 'no anomalies found' -- that would imply a check that never ran."""
+        scan = {"status": "valid", "data": {"answer": "An EOB.", "flag": False,
+                                            "flag_reason": "No fraud check was run on this document."}}
+        seed = build_seed_history("what is this", scan)
+        assert "No fraud check was run" in seed[1]["text"]
+        assert "No anomalies found" not in seed[1]["text"]
+
     def test_banking_documents_field_names_also_supported(self):
         """banking documents uses anomaly_flag/anomaly_reason instead of
         flag/flag_reason -- the shared builder must handle both."""

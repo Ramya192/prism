@@ -296,8 +296,8 @@ class UnifiedDomainPipeline:
         else:
             seed_answer = extraction_answer or ""
             flag_reason = (
-                "No recognizable fraud-schema fields could be extracted from this "
-                "document -- verdict unavailable, chat is still available."
+                "No fraud check was run on this document: no recognizable fraud-schema "
+                "fields could be extracted. Chat is still available."
             )
         scan_for_seed = {
             "status": "valid",
@@ -355,9 +355,13 @@ class UnifiedDomainPipeline:
 
     def run(
         self, query: str, source_document: str | list[str] | None = None,
-        history: list[dict] | None = None,
+        history: list[dict] | None = None, skip_scope_check: bool = False,
     ) -> dict:
-        """Retrieval draws on this document AND the domain's static
+        """`skip_scope_check` is for questions the app itself offers (the UI's
+        suggested questions): they are in scope by construction, and the LLM
+        gate occasionally mislabels one OUT.
+
+        Retrieval draws on this document AND the domain's static
         reference corpus (if any) in the same fused ranking -- see
         BaseRetrieverAgent.retrieve()'s `reference_source` param.
         `source_document` also accepts a list of filenames for
@@ -366,7 +370,7 @@ class UnifiedDomainPipeline:
         per-document retrieval pass merged after the fact. A single
         string (or None) is unaffected -- passed straight through to
         retrieve()/reason() exactly as before."""
-        if not self._in_scope(query, history):
+        if not skip_scope_check and not self._in_scope(query, history):
             return {
                 "status": "valid",
                 "data": {

@@ -15,12 +15,11 @@ forking the app.
 
 **[https://prism-ramya-aws.duckdns.org](https://prism-ramya-aws.duckdns.org)**
 
-Deployed on AWS EC2 (Amazon Linux 2023, `t3.micro`, free tier) — a single
-Dockerized Streamlit service behind [Caddy](https://caddyserver.com) as a
-reverse proxy, with an automatically issued and renewed Let's Encrypt TLS
-certificate. No ALB, no ECS, no managed load balancer — a deliberately
-minimal, cost-free single-instance deployment (see `deploy/README.md` for
-the full provisioning runbook).
+Deployed on AWS EC2 (Amazon Linux 2023, `t3.micro`, free tier) as a single
+Dockerized Streamlit service. Caddy (a lightweight web server and reverse proxy) is
+the HTTPS front door: it serves the app over TLS and issues and renews its Let's Encrypt
+certificate automatically. One small instance keeps the deployment simple, reliable and free to
+run, and `deploy/README.md` is a step-by-step provisioning runbook for recreating it.
 
 ---
 
@@ -39,7 +38,7 @@ corpus grounding its chat, and each ships a regenerable eval harness.
 | `financial_services` | Tier 1 (scam schema), Tier 2 (exchange manipulation) | Wallet / exchange statements | FinCEN CVC guidance |
 
 Across the four: 9 fraud tiers, 15 committed model artifacts (~30 MB, a fresh
-clone needs no training data), and 345 tests (173 offline tests run in CI).
+clone needs no training data), and 351 tests (179 offline tests run in CI).
 Per-tier F1 against a temporal holdout is under [Evaluation](#evaluation).
 
 **Known limitations**
@@ -47,8 +46,6 @@ Per-tier F1 against a temporal holdout is under [Evaluation](#evaluation).
 - **No authentication** on the public demo — only cost guards (rate limits, daily
   budgets, optional access code).
 - **CSV scoring ceiling** of 2,000 rows per upload; the UI says when it applies.
-- **Banking Tier 1** F1 is low (0.234) because fraud is 0.13% of the holdout: recall
-  is 0.76 but precision is 0.14 — borderline rows escape to the LLM tier by design.
 
 ---
 
@@ -84,6 +81,7 @@ Upload (CSV / PDF / DOCX), pasted text, or a batch      ui/landing.py
     per browser session)                            (ui/guard.py)
  2. load → chunk → embed → ChromaDB              2. scope gate: is this about the
     (vector_store/)                                 document or the domain?
+                                                    (suggested questions skip it)
  3. CSV: each row is a record                    3. retrieve: HyDE + multi-query →
     PDF/DOCX: type gate → retrieve + LLM            RRF fusion over your document AND
     extraction → zero, one or many records          the domain's reference corpus →
@@ -102,10 +100,19 @@ whenever it is confident, and only borderline rows — and schemas no ML tier
 recognises — reach the LLM. A document with no fraud-scoreable fields (an HR
 handbook, a loan agreement) degrades to chat-only, never a fabricated verdict.
 
-Retrieval does not decide the verdict. In the fraud path it only reads the fields out
-of a PDF/DOCX (the same retriever and reasoning agent that power chat); the rules, ML and
-LLM then score those fields, and the LLM tier's context is a fixed text note, not retrieved
-text. Retrieval over the reference corpus grounds chat answers, not fraud scoring.
+**Where retrieval fits.** Retrieval and fraud scoring are separate jobs that share
+one retriever:
+
+- **Fraud verdict.** A CSV needs no retrieval: every row is already a record. For a
+  PDF/DOCX, retrieval is used once at ingest as a *reader*: it pulls the relevant
+  passages out of the document and an LLM extracts structured fields from them
+  (amounts, dates, line items). From that point the verdict depends only on those
+  fields: rules, then ML, then the LLM tier, which sees the extracted fields plus a
+  fixed text note and never any retrieved passage. A document can therefore describe
+  itself as legitimate and still be scored on its numbers.
+- **Chat.** Retrieval over your document *and* the domain's reference corpus (for
+  example Regulation E for Banking) grounds the answers to your questions. Only chat
+  uses the reference corpus.
 
 ---
 
@@ -133,9 +140,20 @@ subclass) — the core (`ConfigLoader`, `AgentOrchestrator`,
 - **Upload anything** — CSV, PDF or DOCX in any domain gets both a fraud verdict and
   a chattable document. Several files at once work too, within a domain or
   across domains from the landing page's batch upload.
-- **Chat with the result** — a floating, multi-turn panel seeded with the verdict
-  ("why was this flagged?"), answering from your document and the domain's
-  reference corpus.
+- **Chat with the result** — a floating, multi-turn assistant (round launcher bubble;
+  header bar with maximize/restore and minimize) seeded with the verdict ("why was
+  this flagged?"), answering from your document and the domain's reference corpus.
+  Each domain offers 2–3 **suggested questions**; every one was run against a real sample
+  document and answered correctly on repeat tries. Answers are computed on a background
+  thread, so resizing or minimizing the panel mid-answer never loses the question, and
+  the conversation, suggestions and input box stay in order (newest at the bottom).
+- **See how well it works** — a "How well does it work?" panel on the landing page and in
+  each workspace shows the measured F1, holdout size and fraud rate per tier, with the caveats
+  (the same figures as [Evaluation](#evaluation)).
+- **Know when a document doesn't fit** — a document with nothing to fraud-score says so
+  plainly ("No fraud check was run on this document"), never "no anomalies found". If its
+  wording clearly belongs to another domain (an insurance claim uploaded into Banking),
+  an amber notice points you at the right workspace.
 - **Score one record by hand** — manual entry in every domain, plus image input for
   Banking.
 - **Read large results at a glance** — a per-layer summary (rules / ML / LLM),
@@ -209,7 +227,7 @@ prism/
 ├── docs/                        # UNIFIED_INGESTION_VISION.md, DATA_CONVENTIONS.md
 ├── streamlit_app.py             # entry point — page setup + step routing only
 ├── main.py                      # CLI smoke test across all 4 domains
-├── tests/                       # 345 tests
+├── tests/                       # 351 tests
 ├── models/                      # committed joblib artifacts for every ML scorer / drift
 │                                #   detector (core/model_store.py) — loaded at startup, no train CSV needed
 ├── deploy/                      # AWS EC2 provisioning runbook + user-data
@@ -259,8 +277,10 @@ small, committed demo data.
 streamlit run streamlit_app.py
 ```
 
-Upload a file or paste a snippet → Prism guesses the domain → confirm or
-override → the matching workspace takes over (fraud verdict + chat).
+Upload a file or paste a snippet → Prism guesses the domain → the guess appears
+beside the upload, with the pipeline diagram and a confirm/override box, so nothing
+needs scrolling → confirm → the matching workspace takes over (fraud verdict + chat).
+The PRISM header stays pinned in the top bar throughout.
 
 New here? The landing page has a sample-file picker (e.g. a payslip PDF) —
 no upload needed. Try it end to end: **Analyze** → confirm the detected
@@ -332,9 +352,34 @@ running Ollama; the drift/eval suites need the train/holdout CSVs.
   document's own claims, extraction output is schema-validated, and chat
   output is only ever rendered as text.
 - **No authentication.** The public demo is open; see the cost guards above.
-- **Uploads on the public demo.** Please use the sample files, not real personal or financial
-  documents. An uploaded document's text is sent to OpenAI for processing and stored in the demo's
-  vector store under your browser session; other visitors cannot see it through the app. A scheduled
-  job (`core/rag/purge_old_uploads.py`, set up in `deploy/README.md`) deletes uploads older than 24 hours.
-- **Model artifacts are pickles** and are loaded only from this repo's own
-  `models/` directory, never from user input.
+- **Uploads on the public demo: what happens to them.** The demo has no sign-in, so it is
+  built to keep as little as possible:
+  - The file is written to a temporary file that is deleted as soon as ingestion finishes.
+    What the app keeps is the extracted text, split into chunks with its embeddings, in the
+    vector store, tagged with your browser-session ID. Other visitors cannot reach it through
+    the app.
+  - To read, answer and score, text from your document is sent to OpenAI's API (extraction,
+    embeddings, chat and the LLM scoring tier), photos go to GPT-4o Vision, and, when an optional
+    Cohere API key is configured, the retrieved passages go to Cohere's reranking service to be
+    ordered by relevance. The fraud rules and ML models run inside the app's own server with
+    no external call; only borderline rows reach the LLM.
+  - A scheduled job (`core/rag/purge_old_uploads.py`, set up in `deploy/README.md`) deletes
+    uploads older than 24 hours.
+  - Because there is no authentication, whoever administers the server could read stored
+    chunks while they exist.
+- **Model artifacts.** Trained models load only from this repository's own `models/`
+  directory, never from user input, and only when their recorded library versions (and
+  training-data hash, when the data is present) match.
+
+---
+
+## Future work
+
+- **Image input for the other domains.** Banking can already score a receipt or cheque
+  photo (GPT-4o Vision reads the amount); a payslip photo, a claim form or a wallet
+  screenshot would extend the same path to Payroll & HR, Insurance and Financial Services.
+- **Fraud-ring detection.** Graph-based detection of linked accounts, once datasets carry a
+  linking identifier (most of the ones used here do not).
+- **Sign-in for the public demo**, replacing the cost guards and optional access code.
+- **Drift detection beyond Banking.** The Isolation Forest detectors exist for all four
+  domains; wiring the others into live verdicts waits on their outlier noise rates coming down.

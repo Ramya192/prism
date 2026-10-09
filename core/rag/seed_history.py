@@ -19,9 +19,14 @@ def build_seed_history(auto_query: str, scan: dict, document: str | None = None)
     data = scan["data"]
     flagged = data.get("anomaly_flag") or data.get("flag")
     reason = data.get("anomaly_reason") or data.get("flag_reason")
-    verdict_text = (
-        f"⚠ Flagged: {reason}" if flagged else "No anomalies found — this looks consistent."
-    )
+    if flagged:
+        verdict_text = f"⚠ Flagged: {reason}"
+    elif reason:
+        # Nothing was scored (e.g. not this domain's kind of document): say so,
+        # rather than implying a fraud check ran and came back clean.
+        verdict_text = f"ℹ {reason}"
+    else:
+        verdict_text = "No anomalies found — this looks consistent."
     # With several documents loaded, a bare verdict turn can't say which
     # file it belongs to, so a follow-up got anchored to the wrong one.
     label = f"[{document}] " if document else ""

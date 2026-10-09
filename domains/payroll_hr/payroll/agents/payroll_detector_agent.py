@@ -158,6 +158,26 @@ class PayrollDetectorAgent:
             )
         return None
 
+    # A record with no positive pay has nothing for the ML ratio/split models
+    # to score (their features divide by gross/total, so a zero or negative
+    # denominator yields a meaningless "implausible" score). Report it as
+    # unverifiable rather than letting the ML layer call it fraud.
+    @staticmethod
+    def _rule_check_no_pay(record: dict, tier: str):
+        if tier == "tier1":
+            amounts = [record.get(c, 0) or 0 for c in ("BasePay", "OvertimePay", "OtherPay")]
+            total = sum(amounts)
+        else:
+            total = record.get("GROSS", 0) or 0
+        if total > 0:
+            return None
+        return (
+            "Risk Level: MEDIUM\n"
+            "Reason: No positive gross pay to verify — the payslip is empty or invalid, "
+            "so it can't be scored for fraud.\n"
+            "Action: FLAG"
+        )
+
     @staticmethod
     def rule_based_filter(record: dict, tier: str = "tier1"):
         if tier == "tier1":
@@ -299,7 +319,7 @@ class PayrollDetectorAgent:
 
         ml_score = None
         if tier != "tier3":
-            rule_result = self.rule_based_filter(record, tier)
+            rule_result = self.rule_based_filter(record, tier) or self._rule_check_no_pay(record, tier)
             if rule_result:
                 return tag_layer(rule_result, RULE_ENGINE)
 

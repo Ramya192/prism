@@ -120,6 +120,16 @@ class TestAnalyse:
         result = agent.analyse(broken)
         assert "Reconciliation error" in result
 
+    def test_tier2_zero_pay_is_unverifiable_not_ml_fraud(self, agent):
+        result = agent.analyse({"GROSS": 0, "Deduction": 0, "Net_Pay": 0})
+        assert "ML model" not in result and "Risk Level: MEDIUM" in result
+        assert "No positive gross pay" in result
+
+    def test_tier1_zero_pay_is_unverifiable_not_ml_fraud(self, agent):
+        zero = {**TIER1_GOOD, "BasePay": 0, "OvertimePay": 0, "OtherPay": 0,
+                "Benefits": 0, "Stated_TotalPay": 0, "Stated_TotalPayBenefits": 0}
+        assert "No positive gross pay" in agent.analyse(zero)
+
     def test_tier3_record_falls_through_to_llm_gracefully(self, agent):
         """No real API key in tests -- must degrade to the safe fallback,
         not crash, and must not fabricate a reconciliation-style verdict

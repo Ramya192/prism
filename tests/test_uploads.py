@@ -31,7 +31,7 @@ def test_default_shows_uploader_and_notice(fake, monkeypatch):
     monkeypatch.delenv("PRISM_SAMPLES_ONLY", raising=False)
     assert uploads.demo_file_uploader("Upload", type=["csv"], key="k") == "WIDGET"
     assert fake.uploader_calls == [("Upload", {"type": ["csv"], "key": "k"})]
-    assert any("Demo only" in c for c in fake.captions)
+    assert any("Public demo" in c for c in fake.captions)
 
 
 @pytest.mark.parametrize("value", ["1", "true", "YES", "on"])

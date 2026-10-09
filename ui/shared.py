@@ -10,6 +10,7 @@ import os
 import re
 import tempfile
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pandas as pd
@@ -61,6 +62,12 @@ def render_fraud_verdicts(verdicts: list[dict] | None, summary: dict | None) -> 
     if not verdicts:
         if not (summary and summary.get("budget_limited")):
             st.info("No recognizable fraud-schema records could be extracted from this document — chat is still available below.")
+        hint = (summary or {}).get("domain_hint")
+        if hint:
+            st.warning(
+                f"This looks like {_a_an(hint['name'])} **{hint['name']}** document, not one this workspace can fraud-check. "
+                f"Use “← change domain” and pick {hint['name']} to get a real fraud verdict."
+            )
         return
     if summary:
         st.caption(f"Scored {summary['total_scored']} record(s) — {summary['flagged']} flagged, {summary['clean']} clean.")
@@ -222,6 +229,13 @@ def render_explainability(flagged: bool, action: str, reason: str, decided_by: s
     )
 
 
+UNVERIFIABLE_REASON_PREFIX = "No positive gross pay"   # payroll_detector_agent's _rule_check_no_pay
+
+
+def _a_an(word: str) -> str:
+    return "an" if word[:1].lower() in "aeiou" else "a"
+
+
 def render_verdict_result(result: dict) -> None:
     """Same {"predicted", "parsed": {...}} shape all 4 domains'
     score_record() returns for a single CSV/manual-entry record (see
@@ -238,7 +252,9 @@ def render_verdict_result(result: dict) -> None:
 
     with st.container(key="analysis_card"):
         st.markdown("<div class='analysis-title'>PRISM Analysis</div>", unsafe_allow_html=True)
-        if flagged:
+        if flagged and reason.startswith(UNVERIFIABLE_REASON_PREFIX):
+            st.warning("⚠ UNABLE TO VERIFY — nothing to score")
+        elif flagged:
             st.error(f"🚨 FRAUD — Risk: {risk_level}")
         else:
             st.success(f"✅ LEGITIMATE — Risk: {risk_level}")
@@ -403,24 +419,79 @@ def render_floating_chat(domain_id: str, render_drawer_content) -> None:
                 unsafe_allow_html=True,
             )
 
-    with st.container(key="chat_fab"):
-        if st.button("✕" if is_open else "💬", key="chat_fab_btn"):
-            st.session_state[chat_key] = not is_open
-            st.rerun()
+    # Same pattern as PayNexus's ChatWidget: a launcher bubble when closed;
+    # when open, a header bar (title + maximize/restore + minimize) over the
+    # conversation. Minimizing also resets the maximized size.
+    if not is_open:
+        with st.container(key="chat_fab"):
+            if st.button("💬", key="chat_fab_btn"):
+                st.session_state[chat_key] = True
+                st.rerun()
+        return
 
-    if is_open:
-        with st.container(key="chat_drawer"):
-            title_col, max_col = st.columns([5, 1])
+    with st.container(key="chat_drawer"):
+        with st.container(key="chat_header"):
+            title_col, max_col, min_col = st.columns([6, 1, 1], vertical_alignment="center")
             with title_col:
-                st.markdown("<div class='chat-drawer-title'>💬 Chat</div>", unsafe_allow_html=True)
+                st.markdown("<div class='chat-drawer-title'>💬 Prism Assistant</div>", unsafe_allow_html=True)
             with max_col:
-                with st.container(key="chat_max_btn_wrap"):
-                    max_label = "🗗" if is_maximized else "⛶"
-                    if st.button(max_label, key=f"{domain_id}_chat_max_btn",
-                                 help="Restore" if is_maximized else "Maximize"):
-                        st.session_state[max_key] = not is_maximized
-                        st.rerun()
+                if st.button("", key=f"{domain_id}_chat_max_btn",
+                             icon=":material/close_fullscreen:" if is_maximized else ":material/open_in_full:",
+                             help="Restore" if is_maximized else "Maximize"):
+                    st.session_state[max_key] = not is_maximized
+                    st.rerun()
+            with min_col:
+                if st.button("", key=f"{domain_id}_chat_min_btn", icon=":material/remove:", help="Minimize"):
+                    st.session_state[chat_key] = False
+                    st.session_state[max_key] = False
+                    st.rerun()
+        with st.container(key="chat_body"):
             render_drawer_content()
+
+
+# Kept short on purpose: each of these was run against a real sample document
+# and answered correctly on repeated tries. Don't add one without re-testing it
+# (a question the model answers vaguely, or differently each time, makes the
+# suggestion look broken).
+GENERIC_QUESTIONS = [
+    "Summarize this document in a few sentences.",
+]
+
+SUGGESTED_QUESTIONS = {
+    "banking": [
+        "Summarize this statement in a few sentences.",
+        "Which transactions look the most suspicious, and why?",
+        "What does Regulation E say about unauthorized transfers?",
+    ],
+    "payroll_hr": [
+        "Which deductions are taken from this payslip?",
+        "Summarize this payslip in a few sentences.",
+        "What is the net pay?",
+    ],
+    "financial_services": [
+        "Summarize the account activity in this document.",
+        "Which transactions are the largest?",
+    ],
+    "insurance": [
+        "Summarize this claim in a few sentences.",
+        "What is the claimed amount?",
+    ],
+}
+
+
+_CHAT_EXECUTOR = ThreadPoolExecutor(max_workers=4)
+_CHAT_JOBS: dict[str, dict] = {}   # "<owner>:<domain>" -> {"query", "future"}
+
+
+@st.fragment(run_every=1)
+def _chat_job_waiting(job_key: str) -> None:
+    """Polls the background answer once a second. A fragment reruns on its
+    own, so the page (and the chat's scroll position) isn't redrawn each
+    tick -- a full-script `st.rerun()` poll made the whole UI blink."""
+    job = _CHAT_JOBS.get(job_key)
+    if job is None or job["future"].done():
+        st.rerun()   # one full rerun to render the finished answer
+    st.markdown("⏳ _Running retrieve → reason → validate..._")
 
 
 def render_chat_panel(domain_id: str, pipeline, doc_key: str, history_key: str) -> None:
@@ -432,51 +503,93 @@ def render_chat_panel(domain_id: str, pipeline, doc_key: str, history_key: str) 
     `.get()` for every other domain, not a Banking-specific branch."""
     doc = st.session_state.get(doc_key)
     history = st.session_state.get(history_key, [])
-    for turn in history:
-        with st.chat_message("user" if turn["speaker"] == "user" else "assistant"):
-            st.markdown(md_safe(turn["text"]))
+    # Layout, top to bottom: conversation (past turns, then the question being
+    # answered and its answer), then suggestions, then the input box. The
+    # conversation is a container created first and filled later in this
+    # function, so a new turn lands ABOVE the input instead of below it.
+    convo = st.container()
+    with convo:
+        for turn in history:
+            with st.chat_message("user" if turn["speaker"] == "user" else "assistant"):
+                st.markdown(md_safe(turn["text"]))
+
+    pending_key = f"{domain_id}_chat_pending"
+    if doc:
+        with st.expander("💡 Suggested questions", expanded=not history):
+            for i, q in enumerate(SUGGESTED_QUESTIONS.get(domain_id, GENERIC_QUESTIONS)):
+                if st.button(q, key=f"{domain_id}_suggest_{i}", use_container_width=True):
+                    st.session_state[pending_key] = q
+                    st.rerun()
 
     query = st.chat_input("Ask about this document...", key=f"{domain_id}_chat_input")
-    if not query:
-        return
-    if not doc:
-        st.warning("Ingest a document first.")
-        return
-    if not allow("chat"):
-        return
-    with st.chat_message("user"):
-        st.markdown(md_safe(query))
-    with st.spinner("Running retrieve → reason → validate..."):
-        result = pipeline.run(query, source_document=doc, history=history)
-    if result["status"] != "valid":
-        st.error(f"Validation errors: {result['errors']}")
-        return
-    data = result["data"]
-    history.append({"speaker": "user", "text": query})
-    history.append({"speaker": "assistant", "text": data.get("answer", "No answer returned.")})
-    st.session_state[history_key] = history
-    with st.chat_message("assistant"):
-        st.markdown(md_safe(data.get("answer", "No answer returned.")))
-        if str(data.get("source_document", "")).lower() != "none":   # "none" = off-topic question, nothing backed it
-            render_citations(result.get("chunks"), doc)
-        flagged = data.get("flag") or data.get("anomaly_flag")
-        reason = data.get("flag_reason") or data.get("anomaly_reason")
-        if flagged:
-            st.warning(md_safe(f"⚠ {reason}"))
-        if data.get("transactions"):   # empty for a regulation/policy answer -- no transaction card then
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Transactions", len(data["transactions"]))
-            c2.metric("Total", f"${data['total_amount']:,.2f}" if data.get("total_amount") is not None else "—")
-            c3.metric("Confidence", f"{data.get('confidence', 0) * 100:.0f}%")
-            c4.metric("Source", data.get("source_document", "—"))
-            st.dataframe(pd.DataFrame(data["transactions"]), use_container_width=True, hide_index=True)
-        evaluation = result.get("evaluation")
-        if evaluation:
-            with st.expander("RAG evaluation"):
-                e1, e2, e3 = st.columns(3)
-                e1.metric("Context Precision", evaluation["context_precision"] if evaluation["context_precision"] is not None else "N/A")
-                e2.metric("Faithfulness", evaluation["faithfulness"])
-                e3.metric("Answer Relevancy", evaluation["answer_relevancy"])
+    query = query or st.session_state.pop(pending_key, None)
+
+    with convo:
+        # The answer is computed on a background thread, not in this script run:
+        # Streamlit aborts a running script whenever any widget is clicked (e.g.
+        # maximize), which used to throw the question away mid-answer. The job
+        # lives in a module-level dict, so a rerun just finds it and keeps waiting.
+        job_key = f"{get_owner()}:{domain_id}"
+        job = _CHAT_JOBS.get(job_key)
+        if query:
+            if not doc:
+                st.warning("Ingest a document first.")
+                return
+            if job is not None:
+                st.info("Still working on your previous question — one at a time.")
+            elif allow("chat"):
+                job = _CHAT_JOBS[job_key] = {
+                    "query": query,
+                    "future": _CHAT_EXECUTOR.submit(
+                        pipeline.run, query, source_document=doc, history=list(history),
+                        skip_scope_check=query in SUGGESTED_QUESTIONS.get(domain_id, GENERIC_QUESTIONS),
+                    ),
+                }
+        if job is None:
+            return
+
+        query = job["query"]
+        with st.chat_message("user"):
+            st.markdown(md_safe(query))
+        if not job["future"].done():
+            _chat_job_waiting(job_key)   # refreshes only this status line, not the whole page
+            return
+        _CHAT_JOBS.pop(job_key, None)
+        try:
+            result = job["future"].result()
+        except Exception:
+            logger.exception("chat answer failed for %s", domain_id)
+            st.error("Something went wrong answering that — please try again.")
+            return
+        if result["status"] != "valid":
+            st.error(f"Validation errors: {result['errors']}")
+            return
+        data = result["data"]
+        history.append({"speaker": "user", "text": query})
+        history.append({"speaker": "assistant", "text": data.get("answer", "No answer returned.")})
+        st.session_state[history_key] = history
+        with st.chat_message("assistant"):
+            st.markdown(md_safe(data.get("answer", "No answer returned.")))
+            if str(data.get("source_document", "")).lower() != "none":   # "none" = off-topic question, nothing backed it
+                render_citations(result.get("chunks"), doc)
+            flagged = data.get("flag") or data.get("anomaly_flag")
+            reason = data.get("flag_reason") or data.get("anomaly_reason")
+            if flagged:
+                st.warning(md_safe(f"⚠ {reason}"))
+            if data.get("transactions"):   # empty for a regulation/policy answer -- no transaction card then
+                c1, c2, c3, c4 = st.columns(4)
+                c1.metric("Transactions", len(data["transactions"]))
+                c2.metric("Total", f"${data['total_amount']:,.2f}" if data.get("total_amount") is not None else "—")
+                c3.metric("Confidence", f"{data.get('confidence', 0) * 100:.0f}%")
+                c4.metric("Source", data.get("source_document", "—"))
+                st.dataframe(pd.DataFrame(data["transactions"]), use_container_width=True, hide_index=True)
+            evaluation = result.get("evaluation")
+            if evaluation:
+                with st.expander("RAG evaluation"):
+                    e1, e2, e3 = st.columns(3)
+                    e1.metric("Context Precision", evaluation["context_precision"] if evaluation["context_precision"] is not None else "N/A")
+                    e2.metric("Faithfulness", evaluation["faithfulness"])
+                    e3.metric("Answer Relevancy", evaluation["answer_relevancy"])
 
 
 def guarded_score(pipeline, record: dict, context: str | None = None) -> dict | None:
@@ -486,6 +599,41 @@ def guarded_score(pipeline, record: dict, context: str | None = None) -> dict | 
     if not allow("score"):
         return None
     return pipeline.score_record(record, context) if context is not None else pipeline.score_record(record)
+
+
+@st.cache_resource
+def _domain_classifier():
+    from core.config_loader import ConfigLoader
+    from core.domain_classifier_agent import DomainClassifierAgent
+    return DomainClassifierAgent(ConfigLoader())
+
+
+def _other_domain_hint(domain_id: str, pipeline, result: dict) -> dict | None:
+    """For a document that got no fraud verdict: does its wording clearly
+    belong to a different domain? Returns {"id","name"} of that domain, or
+    None (also on any error -- this is only a courtesy hint)."""
+    try:
+        head = pipeline._document_head(result)
+        if not head:
+            return None
+        guess = _domain_classifier().classify(head).best_guess
+        if guess and guess.domain_id != domain_id and guess.score >= 0.05:
+            return {"id": guess.domain_id, "name": guess.domain_name}
+    except Exception:
+        logger.warning("domain hint skipped", exc_info=True)
+    return None
+
+
+def attach_domain_hint(domain_id: str, pipeline, result: dict) -> None:
+    """If an ingested document got no fraud verdict and clearly belongs to
+    another domain, record that in result["fraud_summary"]["domain_hint"] so
+    render_fraud_verdicts can point the user at the right workspace. Shared by
+    the workspace upload and the landing page's confirm-and-ingest."""
+    summary = result.get("fraud_summary")
+    if summary is not None and not result.get("fraud_verdicts"):
+        hint = _other_domain_hint(domain_id, pipeline, result)
+        if hint:
+            summary["domain_hint"] = hint
 
 
 def render_document_upload(domain_id: str, pipeline, statements_dir: Path, doc_key: str, verdicts_key: str,
@@ -536,6 +684,7 @@ def render_document_upload(domain_id: str, pipeline, statements_dir: Path, doc_k
         stored_name = result["document"]
         if stored_name not in docs:
             docs.append(stored_name)
+        attach_domain_hint(domain_id, pipeline, result)
         per_doc[stored_name] = {"verdicts": result.get("fraud_verdicts"), "summary": result.get("fraud_summary")}
         # Every document's verdict turns join the chat (each tagged with its
         # filename), appended so an already-started conversation is kept.

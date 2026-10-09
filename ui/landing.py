@@ -5,6 +5,7 @@
 # already convey via being enabled/disabled). Split out of
 # streamlit_app.py, which had grown to 1483 lines.
 
+import io
 import logging
 import os
 import tempfile
@@ -15,7 +16,8 @@ import streamlit as st
 from ui.constants import SAMPLE_FILES
 from ui.guard import allow, describe_ingest_error, get_owner
 from ui.uploads import demo_file_uploader
-from ui.shared import md_safe, render_pipeline_flow, render_config_panel
+from ui.evaluation_panel import render_evaluation_panel
+from ui.shared import attach_domain_hint, md_safe, render_pipeline_flow, render_config_panel
 from ui.batch_upload import render_domain_quick_picks, render_batch_upload_section
 
 logger = logging.getLogger(__name__)
@@ -69,6 +71,25 @@ div[class*="st-key-"][class*="_chip_row"] [data-testid="stColumn"] {
 """
 
 
+def _classification_text(data: bytes, filename: str, max_chars: int = 3000) -> str:
+    """Text to classify a PDF/DOCX by: the filename plus the document's opening
+    text (first two PDF pages / the first paragraphs). A filename alone is often
+    opaque ("CLM001_claim.pdf" matched no domain keyword and the LLM tiebreak
+    guessed wrong). Falls back to the filename for scanned or unreadable files."""
+    head = ""
+    try:
+        if filename.lower().endswith(".pdf"):
+            import pdfplumber
+            with pdfplumber.open(io.BytesIO(data)) as pdf:
+                head = " ".join((page.extract_text() or "") for page in pdf.pages[:2])
+        else:
+            import docx
+            head = " ".join(p.text for p in docx.Document(io.BytesIO(data)).paragraphs if p.text.strip())
+    except Exception:
+        logger.warning("could not read %s for classification; using the filename", filename, exc_info=True)
+    return f"document {filename} {head[:max_chars]}".strip()
+
+
 def render_landing(config_loader, orchestrator, classifier) -> None:
     """The whole step-1 command bar: hero copy, the Quick Upload /
     Batch Upload tabs, classification, and the confirm-and-ingest step
@@ -104,8 +125,15 @@ def render_landing(config_loader, orchestrator, classifier) -> None:
     tab_single, tab_batch = st.tabs(["📄 Quick Upload", "📦 Batch Upload"])
 
     with tab_single:
-        _, mid, _ = st.columns([1, 2, 1])
-        with mid:
+        prior = st.session_state.get("classification_result")
+        if prior and prior.best_guess:
+            # Result exists: input on the left, result beside it on the right
+            # so the confirm step is visible without scrolling.
+            left, right = st.columns([5, 6], gap="large")
+        else:
+            _, left, _ = st.columns([1, 2, 1])
+            right = st.container()
+        with left:
             with st.container(key="cmd_input_box"):
                 text_input = st.text_input(
                     "Paste text",
@@ -124,8 +152,8 @@ def render_landing(config_loader, orchestrator, classifier) -> None:
                 if uploaded is not None:
                     staged_bytes, staged_name = uploaded.getvalue(), uploaded.name
                     if uploaded.name.lower().endswith((".pdf", ".docx")):
-                        st.caption(f"{uploaded.name} — classifying by filename for now; full text is read once you confirm the domain and it's ingested.")
-                        upload_text = f"document {uploaded.name}"
+                        upload_text = _classification_text(staged_bytes, uploaded.name)
+                        st.caption(f"{uploaded.name} — classifying from the document's opening text; the full file is ingested once you confirm the domain.")
                     else:
                         try:
                             upload_text = staged_bytes.decode("utf-8", errors="ignore")
@@ -149,7 +177,7 @@ def render_landing(config_loader, orchestrator, classifier) -> None:
                         if path.exists():
                             staged_bytes, staged_name = path.read_bytes(), download_name
                             if download_name.lower().endswith((".pdf", ".docx")):
-                                upload_text = f"document {download_name}"
+                                upload_text = _classification_text(staged_bytes, download_name)
                             else:
                                 upload_text = staged_bytes.decode("utf-8", errors="ignore")
 
@@ -188,10 +216,11 @@ def render_landing(config_loader, orchestrator, classifier) -> None:
                         {"bytes": staged_bytes, "name": staged_name} if staged_bytes is not None else None
                     )
                     st.session_state["staged_text"] = text_input
+                    st.rerun()   # re-flow into the two-column layout
 
+        with right:
             result = st.session_state.get("classification_result")
             if result and result.best_guess:
-                st.divider()
                 st.markdown("**Guess**")
                 st.success(
                     f"Best guess: **{result.best_guess.domain_name}** "
@@ -209,55 +238,57 @@ def render_landing(config_loader, orchestrator, classifier) -> None:
                 with flow_col:
                     render_pipeline_flow(guessed_config)
                 with config_col:
-                    render_config_panel(guessed_config)
-
-                runnable_list = [d.id for d in config_loader.list_domains(runnable_only=True)]
-                default_idx = (
-                    runnable_list.index(result.best_guess.domain_id)
-                    if result.best_guess.domain_id in runnable_list
-                    else 0
-                )
-                st.markdown("**Confirm or override before anything runs:**")
-                chosen = st.selectbox(
-                    "Domain to run",
-                    options=runnable_list,
-                    index=default_idx,
-                    format_func=lambda i: config_loader.get_domain(i).name,
-                )
-                if st.button("✅ Confirm and continue", type="primary"):
-                    staged = st.session_state.get("staged_file")
-                    if staged:
-                        with st.spinner(f"Ingesting {staged['name']}..."):
-                            try:
-                                pipeline = orchestrator.get_pipeline(chosen)
-                                suffix = Path(staged["name"]).suffix or ".pdf"
-                                with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-                                    tmp.write(staged["bytes"])
-                                    tmp_path = tmp.name
+                    runnable_list = [d.id for d in config_loader.list_domains(runnable_only=True)]
+                    default_idx = (
+                        runnable_list.index(result.best_guess.domain_id)
+                        if result.best_guess.domain_id in runnable_list
+                        else 0
+                    )
+                    st.markdown("**Confirm or override before anything runs:**")
+                    chosen = st.selectbox(
+                        "Domain to run",
+                        options=runnable_list,
+                        index=default_idx,
+                        format_func=lambda i: config_loader.get_domain(i).name,
+                    )
+                    if st.button("✅ Confirm and continue", type="primary"):
+                        staged = st.session_state.get("staged_file")
+                        if staged:
+                            with st.spinner(f"Ingesting {staged['name']}..."):
                                 try:
-                                    if not allow("ingest"):
-                                        raise RuntimeError("upload rate limit reached")
-                                    ingest_result = pipeline.ingest(
-                                        tmp_path, filename=Path(staged["name"]).name, owner=get_owner(),
-                                    )
-                                finally:
-                                    os.remove(tmp_path)
-                            except Exception as e:
-                                logger.exception("landing ingest failed for %s", staged["name"])
-                                st.session_state["staged_ingest_error"] = describe_ingest_error(e)
-                            else:
-                                stored_name = ingest_result["document"]
-                                st.session_state[f"{chosen}_doc"] = [stored_name]
-                                st.session_state[f"{chosen}_verdicts"] = {
-                                    stored_name: {
-                                        "verdicts": ingest_result.get("fraud_verdicts"),
-                                        "summary": ingest_result.get("fraud_summary"),
+                                    pipeline = orchestrator.get_pipeline(chosen)
+                                    suffix = Path(staged["name"]).suffix or ".pdf"
+                                    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                                        tmp.write(staged["bytes"])
+                                        tmp_path = tmp.name
+                                    try:
+                                        if not allow("ingest"):
+                                            raise RuntimeError("upload rate limit reached")
+                                        ingest_result = pipeline.ingest(
+                                            tmp_path, filename=Path(staged["name"]).name, owner=get_owner(),
+                                        )
+                                    finally:
+                                        os.remove(tmp_path)
+                                except Exception as e:
+                                    logger.exception("landing ingest failed for %s", staged["name"])
+                                    st.session_state["staged_ingest_error"] = describe_ingest_error(e)
+                                else:
+                                    attach_domain_hint(chosen, pipeline, ingest_result)
+                                    stored_name = ingest_result["document"]
+                                    st.session_state[f"{chosen}_doc"] = [stored_name]
+                                    st.session_state[f"{chosen}_verdicts"] = {
+                                        stored_name: {
+                                            "verdicts": ingest_result.get("fraud_verdicts"),
+                                            "summary": ingest_result.get("fraud_summary"),
+                                        }
                                     }
-                                }
-                                st.session_state[f"{chosen}_history"] = ingest_result.get("seed_history", [])
-                        del st.session_state["staged_file"]
-                    st.session_state["confirmed_domain"] = chosen
-                    st.rerun()
+                                    st.session_state[f"{chosen}_history"] = ingest_result.get("seed_history", [])
+                            del st.session_state["staged_file"]
+                        st.session_state["confirmed_domain"] = chosen
+                        st.rerun()
+                    render_config_panel(guessed_config)
 
     with tab_batch:
         render_batch_upload_section(classifier, orchestrator, config_loader)
+
+    render_evaluation_panel()

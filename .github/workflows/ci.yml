@@ -46,6 +46,8 @@ jobs:
           tests/test_logging_and_history.py
           tests/test_purge_old_uploads.py
           tests/test_uploads.py
+          tests/test_landing_classification_text.py
+          tests/test_evaluation_panel.py
   docker-build:
     runs-on: ubuntu-latest
     steps:

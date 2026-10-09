@@ -2,6 +2,7 @@
 # 2-tab render_workspace()) + its manual-entry form. Split out of
 # streamlit_app.py, which had grown to 1483 lines.
 
+from datetime import date, timedelta
 from pathlib import Path
 
 import streamlit as st
@@ -14,7 +15,9 @@ def insurance_manual_entry(pipeline) -> None:
     with c1:
         claim_amount = st.number_input("Claim Amount ($)", 0.0, 100000.0, 500.0, 1.0, key="insurance_claim_amt")
         approved_amount = st.number_input("Approved Amount ($)", 0.0, 100000.0, 400.0, 1.0, key="insurance_approved_amt")
-        service_date = st.date_input("Service Date", key="insurance_service_date")
+        service_date = st.date_input(
+            "Service Date", value=date.today() - timedelta(days=30), key="insurance_service_date",
+        )
         claim_date = st.date_input("Claim Date", key="insurance_claim_date")
     with c2:
         patient_age = st.number_input("Patient Age", 0, 120, 45, key="insurance_age")

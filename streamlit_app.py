@@ -36,6 +36,7 @@ from ui.constants import WORKSPACE_SUBTITLES
 from ui.guard import require_access_code
 from ui.styles import GLOBAL_CSS, render_top_navbar
 from ui.shared import render_config_panel, render_banner
+from ui.evaluation_panel import render_evaluation_panel
 from ui.landing import render_landing
 from ui.batch_upload import render_batch_results_view
 from ui.domains.banking import render_banking_workspace
@@ -124,6 +125,10 @@ else:
     with change_col:
         if st.button("← change domain"):
             del st.session_state["confirmed_domain"]
+            # Back to a clean landing page -- a stale guess from the last
+            # analysis would otherwise reappear beside an empty upload box.
+            for stale in ("classification_result", "staged_file", "staged_text"):
+                st.session_state.pop(stale, None)
             st.rerun()
     with reset_col:
         if st.button("↺ Start over"):
@@ -147,3 +152,5 @@ else:
         render_financial_services_workspace(pipeline)
     elif domain_id == "payroll_hr":
         render_payroll_hr_workspace(pipeline)
+
+    render_evaluation_panel(domain_id)

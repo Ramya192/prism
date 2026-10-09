@@ -7,8 +7,9 @@ import os
 import streamlit as st
 
 DEMO_NOTICE = (
-    "Demo only: please try the sample files, not real personal or financial documents. "
-    "Uploads are stored under your browser session and may be deleted."
+    "Public demo, no sign-in. Your file is processed through OpenAI's API and then deleted from "
+    "the server; the extracted text is kept under your browser session (not visible to other "
+    "visitors) and cleared automatically after 24 hours."
 )
 
 

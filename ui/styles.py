@@ -10,19 +10,22 @@ GLOBAL_CSS = """
 .block-container { padding-top: 3.6rem !important; }
 
 .st-key-top_navbar {
+    position: fixed !important; top: 0; left: 24px; right: 240px; width: auto !important; max-width: none !important; height: 56px; z-index: 999991;
     display: flex !important; flex-direction: row !important; justify-content: space-between !important;
-    align-items: center !important; padding: 4px 0 16px; margin-bottom: 8px;
-    border-bottom: 1px solid #e3e6ec;
+    align-items: center !important; padding: 0 8px; margin: 0; background: #fff;
 }
+/* keep clear of the sidebar (or its collapsed expand arrow) when one exists */
+.stApp:has([data-testid="stSidebar"][aria-expanded="true"]) .st-key-top_navbar { left: 360px; }
+.stApp:has([data-testid="stSidebar"][aria-expanded="false"]) .st-key-top_navbar { left: 64px; }
 .st-key-top_navbar > .stElementContainer { width: auto !important; flex: 0 0 auto !important; }
 .st-key-top_navbar .navbar-logo { display: flex; align-items: center; gap: 12px; }
 .st-key-top_navbar .navbar-mark {
-    width: 40px; height: 40px; border-radius: 10px; background: #2f5fdb; color: #fff;
+    width: 34px; height: 34px; border-radius: 10px; background: #2f5fdb; color: #fff;
     display: flex; align-items: center; justify-content: center;
     line-height: 1; flex-shrink: 0;
 }
 .st-key-top_navbar .navbar-wordmark {
-    font-size: 27px; font-weight: 800; letter-spacing: 0.04em; color: #2f5fdb; text-transform: uppercase;
+    font-size: 24px; font-weight: 800; letter-spacing: 0.04em; color: #2f5fdb; text-transform: uppercase;
 }
 .st-key-top_navbar .navbar-author { font-size: 16px; font-weight: 500; color: #626977; }
 
@@ -54,12 +57,31 @@ GLOBAL_CSS = """
     background: #ffffff; border: 1px solid #e3e6ec; border-radius: 16px;
     box-shadow: 0 8px 30px rgba(20,24,32,.18); padding: 16px;
 }
-.chat-drawer-title { font-weight: 700; font-size: 14px; margin-bottom: 8px; padding-top: 4px; }
-.st-key-chat_max_btn_wrap .stButton>button {
-    border: none !important; background: transparent !important; box-shadow: none !important;
-    color: #8993a6 !important; padding: 0 !important; font-size: 16px !important;
+/* Chat drawer = header bar (never scrolls) + body (scrolls), like PayNexus's ChatWidget */
+.st-key-chat_drawer {
+    padding: 0 !important; gap: 0 !important; overflow: hidden !important;
+    display: flex !important; flex-direction: column !important;
 }
-.st-key-chat_max_btn_wrap .stButton>button:hover { color: #2f5fdb !important; }
+.st-key-chat_drawer > *:has(.st-key-chat_header) { flex: 0 0 auto; }
+.st-key-chat_drawer > *:has(.st-key-chat_body) { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.st-key-chat_body { height: 100%; overflow-y: auto; padding: 16px; }
+.st-key-chat_header {
+    background: #2f5fdb; color: #fff; padding: 8px 12px; border-radius: 16px 16px 0 0;
+}
+/* title takes the free space; the two icon buttons sit together at the right */
+.st-key-chat_header [data-testid="stHorizontalBlock"] { gap: 2px !important; flex-wrap: nowrap !important; }
+.st-key-chat_header [data-testid="stHorizontalBlock"] > div { flex: 0 0 36px !important; width: 36px !important; min-width: 0 !important; }
+.st-key-chat_header [data-testid="stHorizontalBlock"] > div:first-child { flex: 1 1 auto !important; width: auto !important; }
+.chat-drawer-title { font-weight: 600; font-size: 14px; color: #fff; margin: 0; }
+.st-key-chat_header button,
+.st-key-chat_header [data-testid^="stBaseButton"] {
+    border: none !important; background: transparent !important; background-color: transparent !important;
+    box-shadow: none !important; color: #fff !important; padding: 4px !important;
+    min-height: 0 !important; width: 32px;
+}
+.st-key-chat_header button *, .st-key-chat_header [data-testid="stIconMaterial"] { color: #fff !important; fill: #fff !important; }
+.st-key-chat_header button:hover, .st-key-chat_header button:focus,
+.st-key-chat_header button:active { background: rgba(255,255,255,.18) !important; border: none !important; }
 
 /* "What happens next" strip */
 .next-steps {
