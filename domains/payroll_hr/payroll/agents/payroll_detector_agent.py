@@ -164,12 +164,14 @@ class PayrollDetectorAgent:
     # unverifiable rather than letting the ML layer call it fraud.
     @staticmethod
     def _rule_check_no_pay(record: dict, tier: str):
+        # A missing field is not zero pay (same reasoning as the tier-3 note
+        # above), so only act on pay fields the record actually carries.
         if tier == "tier1":
-            amounts = [record.get(c, 0) or 0 for c in ("BasePay", "OvertimePay", "OtherPay")]
-            total = sum(amounts)
+            present = [record[c] or 0 for c in ("BasePay", "OvertimePay", "OtherPay") if c in record]
+            total = sum(present) if present else None
         else:
-            total = record.get("GROSS", 0) or 0
-        if total > 0:
+            total = record.get("GROSS")
+        if total is None or total > 0:
             return None
         return (
             "Risk Level: MEDIUM\n"
